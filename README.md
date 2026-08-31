@@ -40,19 +40,14 @@ day the summit is *warmer* than the village. This app forecasts every 100 m band
 
 ## Deploying to GitHub Pages
 
-Everything is static at the repository root, so either method works:
+Live at **https://antonalin.github.io/AreWeather/**
 
-**Option A — deploy from a branch (simplest)**
-1. Push this repository to GitHub.
-2. *Settings → Pages → Source: Deploy from a branch*, pick your branch and `/ (root)`.
-3. The site appears at `https://<user>.github.io/<repo>/`.
+Everything is static at the repository root, so deployment is a repository setting and nothing
+else: *Settings → Pages → Source: **Deploy from a branch**, branch `main`, folder `/ (root)`*.
+Every push to `main` republishes automatically.
 
-**Option B — GitHub Actions**
-`.github/workflows/pages.yml` is included and deploys the root on every push to `main`. Set
-*Settings → Pages → Source: GitHub Actions* and it runs itself.
-
-`.nojekyll` is present so Jekyll does not touch the files. There is nothing to build and no
-dependency to install.
+`.nojekyll` is present so Jekyll does not touch the files. There is no build step, no workflow and
+no dependency to install — which is the point.
 
 ## Running it locally
 
