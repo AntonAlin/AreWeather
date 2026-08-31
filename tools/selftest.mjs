@@ -374,16 +374,16 @@ console.log('\nConfiguration');
   const bareStorm = { ...storm, snowDepth: 0 };
   ok(scoreActivity(activityById('trail'), bareBreezy).score > scoreActivity(activityById('trail'), bareStorm).score,
     'while running prefers the calmer of the same two winds');
-  ok(scoreActivity(activityById('trail'), { ...bareBreezy, snowDepth: 0.6 }).label === 'Out of season',
+  ok(scoreActivity(activityById('trail'), { ...bareBreezy, snowDepth: 0.6 }).labelKey === 'verdict.outOfSeason',
     'and running is out of season under deep snow, rather than merely scoring badly');
 
   // Seasons gate rather than score.
   const summer = { ...h, snowDepth: 0, time: new Date(2026, 6, 15, 12) };
   const winter = { ...h, snowDepth: 0.8, time: new Date(2026, 0, 15, 12) };
-  ok(scoreActivity(activityById('skimo'), summer).label === 'Out of season', 'no ski touring without snow');
-  ok(scoreActivity(activityById('bike'), winter).label === 'Out of season', 'no bike park under 80 cm of snow');
-  ok(scoreActivity(activityById('bike'), summer).label !== 'Out of season', 'the bike park runs on bare ground');
-  ok(scoreActivity(activityById('skimo'), winter).label !== 'Out of season', 'and ski touring runs on snow');
+  ok(scoreActivity(activityById('skimo'), summer).labelKey === 'verdict.outOfSeason', 'no ski touring without snow');
+  ok(scoreActivity(activityById('bike'), winter).labelKey === 'verdict.outOfSeason', 'no bike park under 80 cm of snow');
+  ok(scoreActivity(activityById('bike'), summer).labelKey !== 'verdict.outOfSeason', 'the bike park runs on bare ground');
+  ok(scoreActivity(activityById('skimo'), winter).labelKey !== 'verdict.outOfSeason', 'and ski touring runs on snow');
 
   // Terrain gating.
   const liftless = { ...MTN, features: ['plateau'] };

@@ -1,14 +1,31 @@
 /* Small shared helpers: DOM, storage, time, formatting, colour ramps. */
 
+import { locale, lang, t } from './i18n.js';
+
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-export const lerp = (a, b, t) => a + (b - a) * t;
+export const lerp = (a, b, f) => a + (b - a) * f;
 export const round = (v, d = 0) => {
   const p = 10 ** d;
   return Math.round(v * p) / p;
 };
+
+/* Swedish writes 3,2 km and 0,6 °C/100 m. Getting the decimal separator wrong
+   is the fastest way to look like a machine translation, so every number the
+   interface prints goes through Intl rather than toFixed. */
+const numberFormatters = new Map();
+export function dec(v, digits = 1) {
+  if (!Number.isFinite(v)) return '–';
+  const key = `${locale()}|${digits}`;
+  if (!numberFormatters.has(key)) {
+    numberFormatters.set(key, new Intl.NumberFormat(locale(), {
+      minimumFractionDigits: 0, maximumFractionDigits: digits,
+    }));
+  }
+  return numberFormatters.get(key).format(v);
+}
 export const mean = (arr) => {
   const v = arr.filter(Number.isFinite);
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : NaN;
@@ -32,21 +49,32 @@ export function parseLocal(s) {
   if (!m) return null;
   return new Date(+m[1], +m[2] - 1, +m[3], +(m[4] ?? 0), +(m[5] ?? 0));
 }
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/* Day and month names come from Intl so that Swedish reads "tis 1 sep" rather
+   than a translated English abbreviation. Formatters are cached per locale. */
+const formatters = new Map();
+function fmt(options) {
+  const key = `${locale()}|${JSON.stringify(options)}`;
+  if (!formatters.has(key)) formatters.set(key, new Intl.DateTimeFormat(locale(), options));
+  return formatters.get(key);
+}
+const capitalise = (s2) => (s2 ? s2[0].toUpperCase() + s2.slice(1) : s2);
+/** Swedish drops the trailing period Intl adds to abbreviated weekday names. */
+const tidy = (s2) => s2.replace(/\.$/, '').replace(/\.,/, ',');
+
 export const fmtHour = (d) => String(d.getHours()).padStart(2, '0');
-export const fmtDay = (d) => `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
-export const fmtShortDay = (d) => `${DAYS[d.getDay()]} ${d.getDate()}`;
+export const fmtDay = (d) => capitalise(tidy(fmt({ weekday: 'short', day: 'numeric', month: 'short' }).format(d)));
+export const fmtShortDay = (d) => capitalise(tidy(fmt({ weekday: 'short', day: 'numeric' }).format(d)));
+export const fmtWeekday = (d) => capitalise(tidy(fmt({ weekday: 'short' }).format(d)));
 export const fmtClock = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 export const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 export const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return d; };
 
 export function ago(ts) {
   const s = Math.max(0, (Date.now() - ts) / 1000);
-  if (s < 90) return 'just now';
-  if (s < 3600) return `${Math.round(s / 60)} min ago`;
-  if (s < 86400) return `${Math.round(s / 3600)} h ago`;
-  return `${Math.round(s / 86400)} d ago`;
+  if (s < 90) return t('time.justNow');
+  if (s < 3600) return t('time.minutes', { n: Math.round(s / 60) });
+  if (s < 86400) return t('time.hours', { n: Math.round(s / 3600) });
+  return t('time.days', { n: Math.round(s / 86400) });
 }
 
 /* ---------- formatting ---------- */
@@ -54,11 +82,18 @@ export const fmtTemp = (v, d = 0) => (Number.isFinite(v) ? `${v > 0 && d === 0 ?
 export const fmtNum = (v, d = 0) => (Number.isFinite(v) ? round(v, d).toFixed(d) : '–');
 export function fmtWind(ms, unit) {
   if (!Number.isFinite(ms)) return '–';
-  return unit === 'kmh' ? `${Math.round(ms * 3.6)}` : `${round(ms, ms < 10 ? 1 : 0)}`;
+  return unit === 'kmh' ? `${Math.round(ms * 3.6)}` : dec(ms, ms < 10 ? 1 : 0);
 }
 export const windUnitLabel = (unit) => (unit === 'kmh' ? 'km/h' : 'm/s');
-const ARROWS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-export const compass = (deg) => (Number.isFinite(deg) ? ARROWS[Math.round(((deg % 360) + 360) % 360 / 22.5) % 16] : '–');
+/* Swedish uses O for öst and V for väst — a compass rose reading "E" is an
+   immediate tell that nobody Swedish looked at the page. */
+const ARROWS = {
+  en: ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'],
+  sv: ['N', 'NNO', 'NO', 'ONO', 'O', 'OSO', 'SO', 'SSO', 'S', 'SSV', 'SV', 'VSV', 'V', 'VNV', 'NV', 'NNV'],
+};
+export const compass = (deg) => (Number.isFinite(deg)
+  ? (ARROWS[lang()] ?? ARROWS.en)[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16]
+  : '–');
 
 /* ---------- storage (never throws; private mode is not an error) ---------- */
 export const store = {
@@ -86,10 +121,10 @@ function rampColor(stops, v) {
     if (v <= stops[i][0]) {
       const [x0, c0] = stops[i - 1];
       const [x1, c1] = stops[i];
-      const t = (v - x0) / (x1 - x0);
+      const f = (v - x0) / (x1 - x0);
       const a = c0.match(/\w\w/g).map((h) => parseInt(h, 16));
       const b = c1.match(/\w\w/g).map((h) => parseInt(h, 16));
-      return rgb(lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t));
+      return rgb(lerp(a[0], b[0], f), lerp(a[1], b[1], f), lerp(a[2], b[2], f));
     }
   }
   return stops[stops.length - 1][1];
@@ -167,18 +202,3 @@ export function nowIsoHour(timeZone) {
     return `${isoDate(d)}T${String(d.getHours()).padStart(2, '0')}`;
   }
 }
-
-/** WMO weather interpretation codes, in plain language. */
-const WMO = {
-  0: 'Clear', 1: 'Mostly clear', 2: 'Partly cloudy', 3: 'Overcast',
-  45: 'Fog', 48: 'Freezing fog',
-  51: 'Light drizzle', 53: 'Drizzle', 55: 'Heavy drizzle',
-  56: 'Freezing drizzle', 57: 'Freezing drizzle',
-  61: 'Light rain', 63: 'Rain', 65: 'Heavy rain',
-  66: 'Freezing rain', 67: 'Freezing rain',
-  71: 'Light snow', 73: 'Snow', 75: 'Heavy snow', 77: 'Snow grains',
-  80: 'Rain showers', 81: 'Rain showers', 82: 'Violent rain showers',
-  85: 'Snow showers', 86: 'Heavy snow showers',
-  95: 'Thunderstorm', 96: 'Thunderstorm with hail', 99: 'Thunderstorm with hail',
-};
-export const wmoLabel = (code) => WMO[code] ?? null;

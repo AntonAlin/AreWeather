@@ -1,7 +1,8 @@
 /* Hand-rolled SVG visualisation. No chart library: every mark here needs to
    know about elevation, phase or wind, and generic charting tools fight that. */
 
-import { svgEl, tempColor, windColor, precipColor, clamp, lerp, fmtHour, fmtShortDay, fmtWind, round } from './util.js';
+import { svgEl, tempColor, windColor, precipColor, clamp, lerp, fmtHour, fmtShortDay, fmtWind, dec } from './util.js';
+import { t } from './i18n.js';
 
 const AXIS = '#66717f';
 const GRID = 'rgba(255,255,255,.10)';
@@ -42,8 +43,8 @@ export function precipCellColor(band) {
   const mm = band.precip;
   if (!Number.isFinite(mm) || mm < 0.05) return 'rgba(255,255,255,.035)';
   if (band.phase === 'snow') {
-    const t = clamp(Math.sqrt(mm / 4), 0, 1);
-    const c = (a, b) => Math.round(lerp(a, b, t));
+    const f = clamp(Math.sqrt(mm / 4), 0, 1);
+    const c = (a, b) => Math.round(lerp(a, b, f));
     return `rgb(${c(30, 224)},${c(58, 242)},${c(95, 254)})`;
   }
   return precipColor(mm);
@@ -60,17 +61,18 @@ export function renderMatrix(container, model, opts) {
   const top = 40;
   const width = gutter + cols.length * cw + 8;
   const height = top + rows.length * ch + 22;
-  const metricName = { temp: 'temperature', feels: 'feels-like temperature', wind: 'wind speed', precip: 'precipitation' }[metric] ?? metric;
-  const svg = frame(container, width, height,
-    `${metricName} for ${rows.length} elevation bands from ${rows[rows.length - 1]} to ${rows[0]} metres over the next ${cols.length} hours`);
+  const svg = frame(container, width, height, t('matrix.aria', {
+    metric: t(`metric.${metric}`), rows: rows.length,
+    lo: rows[rows.length - 1], hi: rows[0], hours: cols.length,
+  }));
 
   const xOf = (i) => gutter + i * cw;
   const yOf = (z) => top + rows.indexOf(z) * ch;
   const yOfElev = (z) => {
     // continuous elevation → y, for the snow-line overlay
     const hi = rows[0], lo = rows[rows.length - 1];
-    const t = clamp((hi - z) / (hi - lo), -0.2, 1.2);
-    return top + t * (rows.length - 1) * ch + ch / 2;
+    const f = clamp((hi - z) / (hi - lo), -0.2, 1.2);
+    return top + f * (rows.length - 1) * ch + ch / 2;
   };
 
   const value = (band) => (metric === 'temp' ? band.temp : metric === 'feels' ? band.feels : metric === 'wind' ? band.wind : band.precip);
@@ -110,7 +112,7 @@ export function renderMatrix(container, model, opts) {
         fill: fill(band), opacity: h.daylight ? 1 : 0.86,
       }, cells);
       if (metric !== 'precip' && Number.isFinite(value(band)) && (cw >= 26 || h.hour % 2 === 0)) {
-        const v = metric === 'wind' ? fmtWind(band.wind, unit) : Math.round(value(band));
+        const v = metric === 'wind' ? fmtWind(band.wind, unit) : dec(value(band), 0);
         text(cells, xOf(i) + cw / 2, yOf(z) + ch / 2 + 3.2, String(v), {
           size: 9, anchor: 'middle', fill: 'rgba(255,255,255,.86)', weight: 500,
         });
@@ -149,13 +151,13 @@ export function renderMatrix(container, model, opts) {
       text(svg, first[0] + 6, first[1] - 6, labelText, { size: 8.5, fill: stroke, weight: 600, tracking: .8 });
     }
   };
-  drawLine((h) => h.snowLine, '#ffffff', '5 4', 'SNOW LINE');
-  drawLine((h) => h.freezingLevel, '#fbbf24', '2 4', '0°C');
+  drawLine((h) => h.snowLine, '#ffffff', '5 4', t('matrix.snowLine'));
+  drawLine((h) => h.freezingLevel, '#fbbf24', '2 4', t('matrix.freezing'));
 
   /* now + selection */
   if (nowIndex >= 0 && nowIndex < cols.length) {
     svgEl('rect', { x: xOf(nowIndex), y: top - 26, width: cw, height: rows.length * ch + 26, fill: 'none', stroke: 'rgba(79,209,255,.85)', 'stroke-width': 1.5, rx: 5 }, svg);
-    text(svg, xOf(nowIndex) + cw / 2, height - 8, 'NOW', { size: 8, anchor: 'middle', fill: '#4fd1ff', weight: 700, tracking: 1 });
+    text(svg, xOf(nowIndex) + cw / 2, height - 8, t('matrix.now'), { size: 8, anchor: 'middle', fill: '#4fd1ff', weight: 700, tracking: 1 });
   }
   const sel = svgEl('rect', {
     x: xOf(clamp(selected, 0, cols.length - 1)), y: top - 4, width: cw, height: rows.length * ch + 8,
@@ -189,15 +191,16 @@ export function renderProfile(container, model, hourIndex, { unit = 'ms', width 
   if (!h) return;
   const height = 340;
   const pad = { l: 42, r: 78, t: 22, b: 30 };
-  const svg = frame(container, width, height,
-    `Vertical temperature and wind profile of ${model.mtn.name} at ${String(h.time.getHours()).padStart(2, '0')}:00`);
+  const svg = frame(container, width, height, t('profile.aria', {
+    mtn: model.mtn.name, hour: `${String(h.time.getHours()).padStart(2, '0')}:00`,
+  }));
 
   const zLo = model.mtn.base - 60;
   const zHi = model.mtn.summit + 260;
   const temps = h.bands.map((b) => b.temp).filter(Number.isFinite);
   const tLo = Math.floor(Math.min(...temps, 0) - 2);
   const tHi = Math.ceil(Math.max(...temps, 0) + 2);
-  const x = (t) => pad.l + ((t - tLo) / (tHi - tLo)) * (width - pad.l - pad.r);
+  const x = (temp) => pad.l + ((temp - tLo) / (tHi - tLo)) * (width - pad.l - pad.r);
   const y = (z) => height - pad.b - ((z - zLo) / (zHi - zLo)) * (height - pad.t - pad.b);
 
   /* mountain silhouette — decoration, kept faint so it never reads as data */
@@ -230,8 +233,8 @@ export function renderProfile(container, model, hourIndex, { unit = 'ms', width 
   }
   /* temperature axis */
   const tick = (tHi - tLo) > 18 ? 5 : 2;
-  for (let t = Math.ceil(tLo / tick) * tick; t <= tHi; t += tick) {
-    text(svg, x(t), height - pad.b + 14, `${t}°`, { size: 9, anchor: 'middle' });
+  for (let temp = Math.ceil(tLo / tick) * tick; temp <= tHi; temp += tick) {
+    text(svg, x(temp), height - pad.b + 14, `${dec(temp, 0)}°`, { size: 9, anchor: 'middle' });
   }
 
   /* cloud layer */
@@ -242,12 +245,12 @@ export function renderProfile(container, model, hourIndex, { unit = 'ms', width 
       fill: 'rgba(255,255,255,.07)',
     }, svg);
     svgEl('line', { x1: pad.l, y1: y(top), x2: width - pad.r, y2: y(top), stroke: 'rgba(255,255,255,.4)', 'stroke-dasharray': '6 4', 'stroke-width': 1 }, svg);
-    text(svg, pad.l + 4, y(top) - 5, `CLOUD BASE ${Math.round(h.cloudBase)} m`, { size: 8.5, fill: 'rgba(255,255,255,.65)', weight: 600, tracking: .8 });
+    text(svg, pad.l + 4, y(top) - 5, t('profile.cloudBase', { z: Math.round(h.cloudBase) }), { size: 8.5, fill: 'rgba(255,255,255,.65)', weight: 600, tracking: .8 });
   }
   /* snow line */
   if (Number.isFinite(h.snowLine)) {
     svgEl('line', { x1: pad.l, y1: y(h.snowLine), x2: width - pad.r, y2: y(h.snowLine), stroke: '#4fd1ff', 'stroke-width': 1.5, 'stroke-dasharray': '5 4' }, svg);
-    text(svg, pad.l + 4, y(h.snowLine) - 5, `SNOW LINE ${Math.round(h.snowLine)} m`, { size: 8.5, fill: '#4fd1ff', weight: 600, tracking: .8 });
+    text(svg, pad.l + 4, y(h.snowLine) - 5, t('profile.snowLine', { z: Math.round(h.snowLine) }), { size: 8.5, fill: '#4fd1ff', weight: 600, tracking: .8 });
   }
 
   /* temperature curve + wind arrows */
@@ -274,7 +277,7 @@ export function renderProfile(container, model, hourIndex, { unit = 'ms', width 
     svgEl('circle', { cx: ax + Math.sin(r) * len, cy: ay - Math.cos(r) * len, r: 2.4, fill: windColor(b.wind) }, svg);
     text(svg, ax + 24, ay + 3.5, fmtWind(b.wind, unit), { size: 9, fill: '#9aa6b6' });
   });
-  text(svg, width - pad.r + 26, pad.t - 6, 'WIND', { size: 8, anchor: 'middle', fill: AXIS, weight: 700, tracking: 1 });
+  text(svg, width - pad.r + 26, pad.t - 6, t('profile.wind'), { size: 8, anchor: 'middle', fill: AXIS, weight: 700, tracking: 1 });
 }
 
 /* ---------- 3. hourly detail ---------- */
@@ -282,8 +285,7 @@ export function renderHourly(container, model, { bandZ, hours = 48, unit = 'ms',
   const cols = model.hours.slice(0, hours);
   const height = 250;
   const pad = { l: 40, r: 44, t: 18, b: 42 };
-  const svg = frame(container, width, height,
-    `Hourly temperature, wind and precipitation at ${bandZ} metres for the next ${cols.length} hours`);
+  const svg = frame(container, width, height, t('hourly.aria', { z: bandZ, hours: cols.length }));
   const plotW = width - pad.l - pad.r;
   const plotH = height - pad.t - pad.b;
   const x = (i) => pad.l + (i + 0.5) * (plotW / cols.length);
@@ -294,7 +296,7 @@ export function renderHourly(container, model, { bandZ, hours = 48, unit = 'ms',
   const highs = cols.map((h) => (h.ens ? h.ens.t90 + (band(h).temp - h.summit.temp) : NaN)).filter(Number.isFinite);
   const tLo = Math.floor(Math.min(...temps, ...lows, 0) - 1.5);
   const tHi = Math.ceil(Math.max(...temps, ...highs, 0) + 1.5);
-  const y = (t) => pad.t + (1 - (t - tLo) / (tHi - tLo)) * plotH;
+  const y = (temp) => pad.t + (1 - (temp - tLo) / (tHi - tLo)) * plotH;
 
   /* night shading */
   let runStart = null;
@@ -308,9 +310,13 @@ export function renderHourly(container, model, { bandZ, hours = 48, unit = 'ms',
 
   /* gridlines */
   const step = (tHi - tLo) > 20 ? 5 : 2;
-  for (let t = Math.ceil(tLo / step) * step; t <= tHi; t += step) {
-    svgEl('line', { x1: pad.l, y1: y(t), x2: width - pad.r, y2: y(t), stroke: t === 0 ? 'rgba(251,191,36,.4)' : GRID, 'stroke-width': 1, 'stroke-dasharray': t === 0 ? '4 4' : '2 6' }, svg);
-    text(svg, pad.l - 6, y(t) + 3.5, `${t}°`, { size: 9, anchor: 'end' });
+  for (let temp = Math.ceil(tLo / step) * step; temp <= tHi; temp += step) {
+    svgEl('line', {
+      x1: pad.l, y1: y(temp), x2: width - pad.r, y2: y(temp),
+      stroke: temp === 0 ? 'rgba(251,191,36,.4)' : GRID, 'stroke-width': 1,
+      'stroke-dasharray': temp === 0 ? '4 4' : '2 6',
+    }, svg);
+    text(svg, pad.l - 6, y(temp) + 3.5, `${dec(temp, 0)}°`, { size: 9, anchor: 'end' });
   }
 
   /* ensemble band */
@@ -340,7 +346,7 @@ export function renderHourly(container, model, { bandZ, hours = 48, unit = 'ms',
       fill: b.phase === 'snow' ? 'rgba(224,242,254,.85)' : b.phase === 'mix' ? 'rgba(167,139,250,.8)' : 'rgba(56,132,255,.8)',
     }, svg);
   });
-  text(svg, width - pad.r + 6, pad.t + plotH - 2, `${round(maxP, 1)}mm`, { size: 8.5, fill: AXIS });
+  text(svg, width - pad.r + 6, pad.t + plotH - 2, `${dec(maxP, 1)}mm`, { size: 8.5, fill: AXIS });
 
   /* temperature line */
   const line = cols.map((h, i) => (Number.isFinite(band(h).temp) ? [x(i), y(band(h).temp)] : null)).filter(Boolean);
@@ -375,12 +381,12 @@ export function renderHourly(container, model, { bandZ, hours = 48, unit = 'ms',
   const marker = svgEl('line', { x1: x(clamp(selected, 0, cols.length - 1)), y1: pad.t, x2: x(clamp(selected, 0, cols.length - 1)), y2: pad.t + plotH, stroke: 'rgba(255,255,255,.5)', 'stroke-width': 1, 'stroke-dasharray': '3 3' }, svg);
 
   key(container, [
-    ['#4fd1ff', 'temperature'],
-    ['rgba(79,209,255,.45)', 'ensemble p10–p90', 'block'],
-    ['rgba(167,139,250,.85)', 'wind'],
-    ['rgba(167,139,250,.42)', 'gusts'],
-    ['rgba(224,242,254,.85)', 'snow', 'block'],
-    ['rgba(56,132,255,.8)', 'rain', 'block'],
+    ['#4fd1ff', t('key.temperature')],
+    ['rgba(79,209,255,.45)', t('key.spread'), 'block'],
+    ['rgba(167,139,250,.85)', t('key.wind')],
+    ['rgba(167,139,250,.42)', t('key.gusts')],
+    ['rgba(224,242,254,.85)', t('key.snow'), 'block'],
+    ['rgba(56,132,255,.8)', t('key.rain'), 'block'],
   ]);
 
   const hit = svgEl('rect', { x: pad.l, y: pad.t, width: plotW, height: plotH, fill: 'transparent', style: 'cursor:crosshair' }, svg);

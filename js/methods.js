@@ -6,6 +6,7 @@ import { APP, PHYS, PRESSURE_LEVELS, MOUNTAINS, MODELS, ACTIVITIES, SCORING, SOU
 import { TEMP_FEATURES } from './ml.js';
 import { snowRatio } from './physics.js';
 import { $, $$, el, round } from './util.js';
+import { t, tr, applyTranslations, renderLangToggle } from './i18n.js';
 
 /* ---------- inline constants ---------- */
 const CONSTANTS = {
@@ -26,75 +27,73 @@ const CONSTANTS = {
   levels: PRESSURE_LEVELS.join(', '),
   phaseMid: round((PHYS.snowBelow + PHYS.rainAbove) / 2, 2),
 };
-for (const node of $$('[data-const]')) {
-  const v = CONSTANTS[node.dataset.const];
-  node.textContent = v === undefined ? '?' : String(v);
+function fillConstants() {
+  for (const node of $$('[data-const]')) {
+    const v = CONSTANTS[node.dataset.const];
+    node.textContent = v === undefined ? '?' : String(v);
+  }
 }
 
 /* ---------- table helper ---------- */
 function table(sel, headers, rows) {
-  const t = $(sel);
-  if (!t) return;
-  t.textContent = '';
-  const thead = el('thead', {}, t);
+  const node = $(sel);
+  if (!node) return;
+  node.textContent = '';
+  const thead = el('thead', {}, node);
   const hr = el('tr', {}, thead);
   for (const h of headers) el('th', { text: h }, hr);
-  const tbody = el('tbody', {}, t);
+  const tbody = el('tbody', {}, node);
   for (const row of rows) {
-    const tr = el('tr', {}, tbody);
-    for (const cell of row) el('td', { html: cell }, tr);
+    const line = el('tr', {}, tbody);
+    for (const cell of row) el('td', { html: cell }, line);
   }
 }
 const link = (url, text) => `<a href="${url}" target="_blank" rel="noopener">${text}</a>`;
 
+function renderTables() {
 /* ---------- 1. sources ---------- */
 table('#providers-table',
-  ['Provider', 'Model used here', 'Licence', 'Credit required'],
+  [t('tbl.provider'), t('tbl.modelUsed'), t('tbl.licence'), t('tbl.credit')],
   SOURCES.providers.map((p) => [
     `${link(p.url, p.org)}<br><span class="muted" style="font-size:.9em">${p.country}</span>`,
     p.product,
-    `${link(p.licenceUrl, p.licence)}${p.caveat ? ' <span style="color:var(--amber)">*</span>' : ''}`,
-    p.credit,
+    `${link(p.licenceUrl, tr(p.licence))}${p.caveat ? ' <span style="color:var(--amber)">*</span>' : ''}`,
+    tr(p.credit),
   ]));
 
 const ukmo = SOURCES.providers.find((p) => p.caveat);
 if (ukmo) {
   const note = el('div', { class: 'callout warn' });
-  note.innerHTML = `<b>* One licence worth your attention.</b>
-    Open-Meteo serves everything from its API under CC BY 4.0, but the UK Met Office global data is
-    published upstream under CC BY-<b>SA</b> — a share-alike licence, which asks that adapted
-    material be released under the same terms. Since this app adapts the data heavily, the tidy
-    options are: accept it and license the displayed forecast CC BY-SA too, or drop that one model.
-    It is the lowest-weighted and least locally relevant of the six over Jämtland, so removing
-    <code>ukmo_seamless</code> from <code>MODELS</code> in <code>js/config.js</code> costs almost
-    nothing. Currently it is <b>${MODELS.some((m) => m.key === ukmo.key) ? 'still in use' : 'not in use'}</b>.`;
+  note.innerHTML = t('sources.ukmoCaveat', {
+    state: t(MODELS.some((m) => m.key === ukmo.key) ? 'sources.stillInUse' : 'sources.notInUse'),
+  });
   $('#providers-table').after(note);
 }
 
 table('#aggregator-table',
-  ['Source', 'Role', 'Licence', 'Notes'],
+  [t('tbl.source'), t('tbl.role'), t('tbl.licence'), t('tbl.notes')],
   [
     [link(SOURCES.aggregator.url, SOURCES.aggregator.name),
-      'Aggregates and serves every model above',
+      t('role.aggregator'),
       link(SOURCES.aggregator.licenceUrl, SOURCES.aggregator.licence),
-      `${SOURCES.aggregator.tier} ${link(SOURCES.aggregator.terms, 'Terms')}`],
-    [SOURCES.ensemble.name, 'Probability and spread', 'As the providers above', SOURCES.ensemble.note],
+      `${tr(SOURCES.aggregator.tier)} ${link(SOURCES.aggregator.terms, t('tbl.terms'))}`],
+    [SOURCES.ensemble.name, t('role.ensemble'), 'As the providers above', tr(SOURCES.ensemble.note)],
     [link(SOURCES.reanalysis.url, SOURCES.reanalysis.name),
-      'Training target for the bias correction',
-      link(SOURCES.reanalysis.licenceUrl, SOURCES.reanalysis.licence),
-      SOURCES.reanalysis.note],
+      t('role.reanalysis'),
+      link(SOURCES.reanalysis.licenceUrl, tr(SOURCES.reanalysis.licence)),
+      tr(SOURCES.reanalysis.note)],
     [link(SOURCES.observations.url, SOURCES.observations.name),
-      'Live station readings, for the ground-truth panel',
-      link(SOURCES.observations.licenceUrl, SOURCES.observations.licence),
-      SOURCES.observations.note],
+      t('role.observations'),
+      link(SOURCES.observations.licenceUrl, tr(SOURCES.observations.licence)),
+      tr(SOURCES.observations.note)],
   ]);
 
 table('#fonts-table',
-  ['Typeface', 'By', 'Licence', 'Text'],
-  SOURCES.fonts.map((f) => [link(f.url, f.name), f.author, f.licence, link(f.file, 'included in this repository')]));
+  [t('tbl.typeface'), t('tbl.by'), t('tbl.licence'), t('tbl.text')],
+  SOURCES.fonts.map((f) => [link(f.url, f.name), f.author, f.licence, link(f.file, t('tbl.included'))]));
 
 /* The attribution block, assembled from the same data as the tables. */
-const attribution = SOURCES.providers.map((p) => `${p.credit}.`).join('<br>')
+const attribution = SOURCES.providers.map((p) => `${tr(p.credit)}.`).join('<br>')
   + `<br>${SOURCES.observations.credit}, licensed under Creative Commons Erkännande 4.0 SE.`
   + `<br>${SOURCES.reanalysis.credit}.`
   + `<br>${SOURCES.reanalysis.disclaimer}`
@@ -106,95 +105,95 @@ $('#footer-attribution').innerHTML = `Weather data by ${link(SOURCES.aggregator.
   + `(${link(SOURCES.aggregator.licenceUrl, 'CC BY 4.0')}, modified) aggregating `
   + `${SOURCES.providers.map((p) => p.org).join(', ')} and ${SOURCES.reanalysis.org}. `
   + `Observation data from ${link(SOURCES.observations.licenceUrl, 'SMHI')}, CC BY 4.0 SE, modified.`;
-$('#verified-date').textContent = SOURCES.verified;
-$('#verified-pill').textContent = `Licences checked ${SOURCES.verified}`;
+$('#verified-pill').textContent = t('pill.verified', { date: SOURCES.verified });
 
 /* ---------- 2. the requests ---------- */
 table('#requests-table',
-  ['Endpoint', 'What for', 'When', 'Cached for'],
+  [t('tbl.endpoint'), t('tbl.whatFor'), t('tbl.when'), t('tbl.cachedFor')],
   [
-    ['<code>api.open-meteo.com<br>/v1/forecast</code>', `Surface fields from ${MODELS.length} models at summit height, 7 days hourly`, 'Opening a mountain', '30 minutes'],
-    ['<code>api.open-meteo.com<br>/v1/forecast</code>', `Pressure-level sounding (${PRESSURE_LEVELS.length} levels) plus freezing level, visibility, CAPE, snow depth`, 'Opening a mountain', '30 minutes'],
-    ['<code>ensemble-api.open-meteo.com<br>/v1/ensemble</code>', 'Ensemble members for spread and probability', 'Opening a mountain', '3 hours'],
-    ['<code>historical-forecast-api.open-meteo.com<br>/v1/forecast</code>', `What every model predicted over the past ${APP.trainingDays} days`, 'First visit per mountain, then every ' + APP.retrainAfterHours + ' hours', '24 hours'],
-    ['<code>archive-api.open-meteo.com<br>/v1/archive</code>', 'ERA5-Land reanalysis for the same hours — the training target', 'With the request above', '24 hours'],
-    [`<code>opendata-download-metobs<br>.smhi.se</code>`, `Latest hour of ${SMHI.parameters.length} observed parameters for every station in Sweden`, 'Once per parameter, shared by every mountain and both pages', '20 minutes'],
+    ['<code>api.open-meteo.com<br>/v1/forecast</code>', t('req.surface', { n: MODELS.length }), t('req.whenOpen'), t('req.min30')],
+    ['<code>api.open-meteo.com<br>/v1/forecast</code>', t('req.profile', { n: PRESSURE_LEVELS.length }), t('req.whenOpen'), t('req.min30')],
+    ['<code>ensemble-api.open-meteo.com<br>/v1/ensemble</code>', t('req.ensemble'), t('req.whenOpen'), t('req.hours3')],
+    ['<code>historical-forecast-api.open-meteo.com<br>/v1/forecast</code>', t('req.history', { n: APP.trainingDays }), t('req.whenTrain', { n: APP.retrainAfterHours }), t('req.hours24')],
+    ['<code>archive-api.open-meteo.com<br>/v1/archive</code>', t('req.archive'), t('req.whenWithAbove'), t('req.hours24')],
+    ['<code>opendata-download-metobs<br>.smhi.se</code>', t('req.smhi', { n: SMHI.parameters.length }), t('req.whenSmhi'), t('req.min20')],
   ]);
 
 /* ---------- 6. snow ratio, read from the function itself ---------- */
 const RATIO_BANDS = [
-  ['above +1 °C', 2], ['−1 to +1 °C', 0], ['−4 to −1 °C', -2.5], ['−8 to −4 °C', -6],
-  ['−14 to −8 °C', -11], ['−20 to −14 °C', -17], ['below −20 °C', -24],
+  [t('ratio.above1'), 2], ['−1…+1 °C', 0], ['−4…−1 °C', -2.5], ['−8…−4 °C', -6],
+  ['−14…−8 °C', -11], ['−20…−14 °C', -17], [t('ratio.below20'), -24],
 ];
 table('#snowratio-table',
-  ['Air temperature', 'Ratio', '1 mm of water gives'],
+  [t('tbl.airTemp'), t('tbl.ratio'), t('tbl.gives')],
   RATIO_BANDS.map(([label, probe]) => [label, `${snowRatio(probe)} : 1`, `${round(snowRatio(probe) / 10, 1)} cm`]));
 
 /* ---------- 7. ml features ---------- */
 const FEATURE_WHY = {
-  'ens mean': 'The forecast being corrected — bias often depends on the value itself.',
-  'model spread': 'Disagreement between models is a proxy for how uncertain the situation is.',
-  humidity: 'Separates humid, cloudy regimes from dry, radiative ones.',
-  cloud: 'Cloud cover drives the diurnal error pattern more than anything else.',
-  wind: 'Windy nights mix the boundary layer; calm ones let it decouple.',
-  'hour sin': 'Time of day, as a smooth cycle rather than a step at midnight.',
-  'hour cos': 'The other half of that cycle.',
-  'season sin': 'Day of year, same trick — bias in January differs from July.',
-  'season cos': 'The other half of the seasonal cycle.',
+  'ens mean': 'feat.ensMean',
+  'model spread': 'feat.spread',
+  humidity: 'feat.humidity',
+  cloud: 'feat.cloud',
+  wind: 'feat.wind',
+  'hour sin': 'feat.hourSin',
+  'hour cos': 'feat.hourCos',
+  'season sin': 'feat.seasonSin',
+  'season cos': 'feat.seasonCos',
 };
-table('#features-table', ['Feature', 'Why it is in the model'],
-  TEMP_FEATURES.map((f) => [`<code>${f}</code>`, FEATURE_WHY[f] ?? '']));
+table('#features-table', [t('tbl.feature'), t('tbl.featureWhy')],
+  TEMP_FEATURES.map((f) => [`<code>${f}</code>`, FEATURE_WHY[f] ? t(FEATURE_WHY[f]) : '']));
 
 /* ---------- 8. scoring, straight from the activity registry ---------- */
 function ruleRows(activity) {
   return activity.rules.map((r) => {
     const effect = r.kind === 'flag'
-      ? `−${r.amount} flat`
-      : `${r.kind === 'bonus' ? '+' : '−'}(value − ${r.from}) × ${r.slope}, capped at ${r.cap}`;
+      ? t('tbl.flatCost', { n: r.amount })
+      : t('tbl.rampCost', { sign: r.kind === 'bonus' ? '+' : '−', from: r.from, slope: r.slope, cap: r.cap });
     const trigger = r.reads
-      ? `${r.reads}<br><span class="muted" style="font-size:.9em"><code>${r.metric}</code></span>`
+      ? `${tr(r.reads)}<br><span class="muted" style="font-size:.9em"><code>${r.metric}</code></span>`
       : r.kind === 'flag'
-        ? `<code>${r.flag}</code>${r.invert ? ' is <b>false</b>' : ''}`
-        : `<code>${r.metric}</code> above ${r.from}`;
-    return [r.label, trigger, effect, r.why];
+        ? `<code>${r.flag}</code>${r.invert ? t('tbl.isFalse') : ''}`
+        : t('tbl.above', { metric: r.metric, n: r.from });
+    return [tr(r.label), trigger, effect, tr(r.why)];
   });
 }
 
 const tables = $('#activity-tables');
 for (const activity of ACTIVITIES) {
   const h3 = el('h3', {}, tables);
-  h3.innerHTML = `${activity.name} <span class="muted" style="font-weight:400">· base <span class="num">${activity.base}</span> · `
-    + `${activity.window}-hour window${activity.requires ? ` · needs <code>${activity.requires}</code> terrain` : ''}</span>`;
-  el('p', { text: activity.blurb }, tables);
+  h3.innerHTML = `${tr(activity.name)} <span class="muted" style="font-weight:400">· ${t('tbl.base')} <span class="num">${activity.base}</span> · `
+    + `${t('tbl.windowHours', { n: activity.window })}`
+    + `${activity.requires ? ` · ${t('tbl.needsTerrain', { feature: activity.requires })}` : ''}</span>`;
+  el('p', { text: tr(activity.blurb) }, tables);
   const wrap = el('div', { class: 'table-scroll' }, tables);
-  const t = el('table', { id: `rules-${activity.id}` }, wrap);
-  table(`#rules-${activity.id}`, ['Factor', 'Triggers on', 'Effect on the score', 'Reasoning'], ruleRows(activity));
-  if (!t.querySelector('tbody tr')) t.remove();
+  const tableEl = el('table', { id: `rules-${activity.id}` }, wrap);
+  table(`#rules-${activity.id}`, [t('tbl.factor'), t('tbl.triggers'), t('tbl.effect'), t('tbl.reasoning')], ruleRows(activity));
+  if (!tableEl.querySelector('tbody tr')) tableEl.remove();
 }
 
-table('#seasons-table', ['Activity', 'Runs when', 'Otherwise'],
+table('#seasons-table', [t('tbl.activity'), t('tbl.runsWhen'), t('tbl.otherwise')],
   ACTIVITIES.filter((a) => a.season).map((a) => [
-    a.name,
-    [a.season.snowMin != null ? `snow depth ≥ ${a.season.snowMin} m` : null,
-      a.season.snowMax != null ? `snow depth ≤ ${a.season.snowMax} m` : null].filter(Boolean).join(' and '),
-    `<i>${a.season.under ?? a.season.over}</i>`,
+    tr(a.name),
+    [a.season.snowMin != null ? t('tbl.snowMin', { n: a.season.snowMin }) : null,
+      a.season.snowMax != null ? t('tbl.snowMax', { n: a.season.snowMax }) : null].filter(Boolean).join(t('tbl.and')),
+    `<i>${tr(a.season.under ?? a.season.over)}</i>`,
   ]));
 
-table('#terrain-table', ['Peak', 'Terrain', 'Activities offered'],
+table('#terrain-table', [t('tbl.peak'), t('tbl.terrain'), t('tbl.offered')],
   MOUNTAINS.map((m) => [
     m.name,
     (m.features ?? []).map((f) => `<code>${f}</code>`).join(' ') || '—',
-    activitiesFor(m).map((a) => a.short).join(', '),
+    activitiesFor(m).map((a) => tr(a.short)).join(', '),
   ]));
 
-table('#labels-table', ['Score', 'Verdict'],
+table('#labels-table', [t('tbl.score'), t('tbl.verdict')],
   SCORING.labels.map(([min, word], i) => {
     const upper = i === 0 ? 100 : SCORING.labels[i - 1][0] - 1;
-    return [`${min}–${upper}`, word];
+    return [`${min}–${upper}`, t(word)];
   }));
 
 /* ---------- 9. constants and mountains ---------- */
-table('#phys-table', ['Constant', 'Value', 'What it controls'], [
+table('#phys-table', [t('tbl.constant'), t('tbl.value'), t('tbl.controls')], [
   ['<code>fallbackLapse</code>', `${PHYS.fallbackLapse} °C / 100 m`, 'Lapse rate used only when no sounding is available'],
   ['<code>anchorScale</code>', `${PHYS.anchorScale} m`, 'How fast the surface anchor gives way to the free atmosphere'],
   ['<code>windBlendScale</code>', `${PHYS.windBlendScale} m`, 'How fast surface wind gives way to the sounding wind'],
@@ -208,7 +207,7 @@ table('#phys-table', ['Constant', 'Value', 'What it controls'], [
 ]);
 
 table('#mountains-table',
-  ['Mountain', 'Summit', 'Valley', 'Vertical', 'Exposure', 'Position'],
+  [t('tbl.mountain'), t('tbl.summit'), t('tbl.valley'), t('tbl.vertical'), t('tbl.exposure'), t('tbl.position')],
   MOUNTAINS.map((m) => [
     `${m.name}<br><span class="muted" style="font-size:.9em">${m.tags.join(' · ')}</span>`,
     `<span class="num">${m.summit} m</span>`,
@@ -217,6 +216,7 @@ table('#mountains-table',
     `<span class="num">${m.exposure.toFixed(2)}×</span>`,
     `<span class="num">${m.lat.toFixed(4)}°N ${m.lon.toFixed(4)}°E</span>`,
   ]));
+}
 
 /* ---------- contact, behind the answer to a question ----------
    The address is never in the source. The AES-GCM key is derived from what the
@@ -224,8 +224,10 @@ table('#mountains-table',
    nothing at all — there is no comparison to bypass. */
 
 $('#issues-link').href = CONTACT.issues;
-$('#gate-question').innerHTML = `${CONTACT.question}<small>${CONTACT.hint}</small>`;
-$('#gate-answer').placeholder = CONTACT.placeholder;
+function fillGate() {
+  $('#gate-question').innerHTML = `${tr(CONTACT.question)}<small>${tr(CONTACT.hint)}</small>`;
+  $('#gate-answer').placeholder = tr(CONTACT.placeholder);
+}
 
 const b64ToBytes = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 const normalise = (s2) => s2.toLowerCase().replace(/[^a-z0-9åäö]/g, '');
@@ -261,16 +263,16 @@ gate.addEventListener('submit', async (ev) => {
   const button = $('#gate-submit');
   button.disabled = true;
   msg.className = 'gate-msg';
-  msg.textContent = 'Deriving key…';
+  msg.textContent = t('gate.deriving');
   const address = await unseal(value);
   button.disabled = false;
   if (!address) {
     msg.className = 'gate-msg bad';
-    msg.textContent = 'That is not it. The number is on the Åreskutan chip at the top of the forecast page.';
+    msg.textContent = t('gate.wrong');
     return;
   }
   msg.className = 'gate-msg good';
-  msg.textContent = 'Decrypted.';
+  msg.textContent = t('gate.ok');
   const mailLink = $('#revealed-mail');
   mailLink.textContent = address;
   mailLink.href = `mailto:${address}?subject=${encodeURIComponent(CONTACT.subject)}`;
@@ -278,10 +280,10 @@ gate.addEventListener('submit', async (ev) => {
   $('#copy-mail').addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(address);
-      $('#copy-mail').textContent = 'Copied';
-      setTimeout(() => { $('#copy-mail').textContent = 'Copy'; }, 1800);
+      $('#copy-mail').textContent = t('gate.copied');
+      setTimeout(() => { $('#copy-mail').textContent = t('gate.copy'); }, 1800);
     } catch {
-      $('#copy-mail').textContent = 'Select it manually';
+      $('#copy-mail').textContent = t('gate.copyManual');
     }
   }, { once: true });
 });
@@ -290,11 +292,14 @@ gate.addEventListener('submit', async (ev) => {
 const sections = $$('.doc > section[id]');
 const toc = $('#toc');
 const links = new Map();
-for (const s of sections) {
-  const title = s.querySelector('h2').textContent.replace(/^\d+\s·\s/, '');
-  const li = el('li', {}, toc);
-  const a = el('a', { href: `#${s.id}`, text: title }, li);
-  links.set(s.id, a);
+function buildToc() {
+  toc.textContent = '';
+  links.clear();
+  for (const section of sections) {
+    const title = section.querySelector('h2').textContent.replace(/^\d+\s·\s/, '');
+    const li = el('li', {}, toc);
+    links.set(section.id, el('a', { href: `#${section.id}`, text: title }, li));
+  }
 }
 const spy = new IntersectionObserver((entries) => {
   for (const e of entries) {
@@ -305,6 +310,17 @@ const spy = new IntersectionObserver((entries) => {
   }
 }, { rootMargin: '-90px 0px -70% 0px' });
 sections.forEach((s) => spy.observe(s));
+
+/* Render once, then again whenever the language changes. */
+function renderPage() {
+  applyTranslations();
+  fillConstants();
+  renderTables();
+  fillGate();
+  buildToc();
+}
+renderPage();
+renderLangToggle($('#lang-toggle'), renderPage);
 
 if ('serviceWorker' in navigator) {
   addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

@@ -168,6 +168,24 @@ sw.js               offline app shell
 tools/selftest.mjs  offline physics + ML test harness
 ```
 
+## Languages
+
+The site is fully bilingual, English and Swedish. It opens in Swedish for a Swedish browser and in
+English otherwise; the toggle in the header overrides that and the choice is remembered. Switching
+never refetches anything — the assembled forecast carries i18n keys and bilingual label objects, not
+sentences, so a language change is a re-render.
+
+The Swedish is written as Swedish, not translated English: the mountain vocabulary is the one used
+in the fjäll and by SMHI — *toppturer*, *nollgradig nivå*, *våttemperatur*, *byvind*, *flatljus*,
+*drivbildning*. Dates come from `Intl`, decimals use a comma, negative numbers use a real minus
+sign, and the compass reads N/NO/O/SO in Swedish rather than N/NE/E/SE.
+
+Strings live in [`js/i18n.js`](js/i18n.js); markup carries `data-i18n` (text) or `data-i18n-html`
+(prose with inline markup). Activity names, rule labels and mountain descriptions are `{ en, sv }`
+objects in `js/config.js`, next to the data they describe. `tools/selftest.mjs` checks that every
+key has both languages, that placeholders and inline HTML tags match across them, and that no long
+string was left untranslated.
+
 ## Sources, licences and terms
 
 There is a full [method and sources page](methods.html) in the app itself, generated from the same

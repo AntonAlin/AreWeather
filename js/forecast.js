@@ -316,7 +316,19 @@ function isDaylight(t, daily) {
    The rules live in ACTIVITIES in config.js so the method page can print
    exactly what ran. This is only the machinery that applies them. */
 
-const NO_DATA = { score: 0, label: 'No data', why: ['forecast data missing for this hour'] };
+/* Verdicts stay language-agnostic: a key for the word, and the rule's own
+   bilingual label objects for the reasons. Switching language re-renders; it
+   never re-computes a forecast. */
+const NO_DATA = {
+  score: 0,
+  labelKey: 'verdict.noData',
+  why: [{ en: 'forecast data missing for this hour', sv: 'prognosdata saknas för den här timmen' }],
+};
+const UNKNOWN_SNOW = { en: 'snow cover unknown', sv: 'okänt snötäcke' };
+const FAR_ABOVE = {
+  en: 'freezing level far above the summit',
+  sv: 'nollgradig nivå långt över toppen',
+};
 
 /** Values a rule can ramp against. */
 const METRICS = {
@@ -370,15 +382,19 @@ function seasonGate(activity, h) {
     const summery = month >= 5 && month <= 8 && h.summit.temp > 6
       && Number.isFinite(h.freezingLevel) && h.freezingLevel > h.summit.z + 400;
     if (season.snowMin != null && summery) {
-      return { out: { score: 5, label: 'Out of season', why: [`${season.under ?? 'no snow cover'} — freezing level far above the summit`] } };
+      const reason = season.under ?? UNKNOWN_SNOW;
+      return { out: { score: 5, labelKey: 'verdict.outOfSeason', why: [{
+        en: `${reason.en} — ${FAR_ABOVE.en}`,
+        sv: `${reason.sv} — ${FAR_ABOVE.sv}`,
+      }] } };
     }
-    return { penalty: 6, note: 'snow cover unknown' };
+    return { penalty: 6, note: UNKNOWN_SNOW };
   }
   if (season.snowMin != null && depth < season.snowMin) {
-    return { out: { score: 3, label: 'Out of season', why: [season.under ?? 'no snow cover'] } };
+    return { out: { score: 3, labelKey: 'verdict.outOfSeason', why: [season.under ?? UNKNOWN_SNOW] } };
   }
   if (season.snowMax != null && depth > season.snowMax) {
-    return { out: { score: 4, label: 'Out of season', why: [season.over ?? 'snow on the ground'] } };
+    return { out: { score: 4, labelKey: 'verdict.outOfSeason', why: [season.over ?? UNKNOWN_SNOW] } };
   }
   return null;
 }
@@ -408,7 +424,7 @@ function applyRules(activity, h, b) {
 
 const finish = (score, hits) => {
   const v = clamp(Math.round(score), 0, 100);
-  return { score: v, label: labelFor(v), why: hits.slice(0, 3).map((x) => x[1]) };
+  return { score: v, labelKey: labelFor(v), why: hits.slice(0, 3).map((x) => x[1]) };
 };
 
 /** Score one activity for one hour. */
@@ -459,7 +475,7 @@ export function dailySummaries(model, activityId, { windowLen, fromIndex = 0 } =
           endTime: slice[len - 1].time,
           dark: !slice.every((h) => h.daylight),
           why: middle.why,
-          label: middle.label,
+          labelKey: middle.labelKey,
           hour: slice[Math.floor(len / 2)],
         };
       }
@@ -467,7 +483,7 @@ export function dailySummaries(model, activityId, { windowLen, fromIndex = 0 } =
     if (!best && hs.length) {
       const h = hs[0];
       const sc = h.scores[activity.id];
-      best = { score: sc.score, startTime: h.time, endTime: h.time, dark: !h.daylight, why: sc.why, label: sc.label, hour: h };
+        best = { score: sc.score, startTime: h.time, endTime: h.time, dark: !h.daylight, why: sc.why, labelKey: sc.labelKey, hour: h };
     }
     const temps = hs.map((h) => h.summit.temp).filter(Number.isFinite);
     const winds = hs.map((h) => h.summit.wind).filter(Number.isFinite);

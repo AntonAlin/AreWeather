@@ -466,3 +466,6 @@ td.cell-wrap { padding: 3px; min-width: 78px; }
 .act-detail { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
 .seg.seg-wrap { flex-wrap: wrap; max-width: 100%; }
 .row-na { font-size: .72rem; color: var(--text-3); font-style: italic; padding: 8px 0; }
+
+/* language switch sits in the header alongside the unit toggle */
+#lang-toggle button { min-width: 34px; letter-spacing: .06em; font-weight: 600; }

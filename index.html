@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ÅreWeather — Mountain forecasts for Åre, Sweden</title>
-<meta name="description" content="High-resolution, elevation-aware mountain weather for Åreskutan, Snasahögarna, Sylarna and the rest of the Åre fjäll. Multi-model ensemble + machine-learned bias correction, built for trail runners and ski mountaineers.">
+<title data-i18n="page.index.title">ÅreWeather — Mountain forecasts for Åre, Sweden</title>
+<meta name="description" data-i18n-content="page.index.description" content="High-resolution, elevation-aware mountain weather for Åreskutan, Snasahögarna, Sylarna and the rest of the Åre fjäll. Multi-model ensemble + machine-learned bias correction, built for trail runners and ski mountaineers.">
 <meta name="theme-color" content="#06080b">
 <meta property="og:title" content="ÅreWeather">
 <meta property="og:description" content="Elevation-resolved mountain weather for the Åre fjäll — trail running & ski mountaineering.">
@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to the forecast</a>
+<a class="skip-link" href="#main" data-i18n="nav.skip">Skip to the forecast</a>
 <div class="aurora" aria-hidden="true"><span class="a1"></span><span class="a2"></span><span class="a3"></span></div>
 <div class="grain" aria-hidden="true"></div>
 
@@ -23,21 +23,22 @@
   <div class="wrap topbar-inner">
     <a class="brand" href="./">
       <svg class="brand-mark" viewBox="0 0 100 100" aria-hidden="true"><path d="M4 84 38 24l17 30 9-15 28 45z"/><path d="M38 24l10 18-10 9-9-8z" class="snow"/></svg>
-      <span class="brand-text">ÅRE<b>WEATHER</b><i>fjäll forecast engine</i></span>
+      <span class="brand-text">ÅRE<b>WEATHER</b><i data-i18n="brand.tagline">fjäll forecast engine</i></span>
     </a>
     <div class="topbar-actions">
-      <a class="nav-link" href="compare.html">Compare peaks</a>
-      <a class="nav-link" href="methods.html">Method</a>
-      <div class="seg" id="unit-toggle" role="group" aria-label="Wind unit">
+      <a class="nav-link" href="compare.html" data-i18n="nav.compare">Compare peaks</a>
+      <a class="nav-link" href="methods.html" data-i18n="nav.method">Method</a>
+      <div class="seg" id="lang-toggle" role="group" data-i18n-label="lang.group" aria-label="Language"></div>
+      <div class="seg" id="unit-toggle" role="group" data-i18n-label="unit.windGroup" aria-label="Wind unit">
         <button type="button" data-unit="ms" class="on">m/s</button>
         <button type="button" data-unit="kmh">km/h</button>
       </div>
-      <button type="button" class="status-pill" id="status-pill" title="Data status — click to refresh">
-        <span class="dot"></span><span id="status-text" role="status" aria-live="polite">Loading…</span>
+      <button type="button" class="status-pill" id="status-pill" data-i18n-title="status.refresh" title="Data status — click to refresh">
+        <span class="dot"></span><span id="status-text" role="status" aria-live="polite" data-i18n="status.loading">Loading…</span>
       </button>
     </div>
   </div>
-  <nav class="mountain-rail" id="mountain-rail" aria-label="Choose a mountain"></nav>
+  <nav class="mountain-rail" id="mountain-rail" data-i18n-label="rail.group" aria-label="Choose a mountain"></nav>
 </header>
 
 <main class="wrap" id="main">
@@ -49,33 +50,33 @@
   <section class="card" id="matrix-card">
     <div class="card-head">
       <div>
-        <h2>Elevation × time</h2>
+        <h2 data-i18n="matrix.title">Elevation × time</h2>
         <p class="sub" id="matrix-sub">Every 100&nbsp;m of the mountain, hour by hour. The white line is the rain/snow boundary.</p>
       </div>
       <div class="controls">
-        <div class="seg" id="matrix-metric" role="group" aria-label="Matrix metric">
-          <button type="button" data-metric="temp" class="on">Temp</button>
-          <button type="button" data-metric="wind">Wind</button>
-          <button type="button" data-metric="precip">Precip</button>
-          <button type="button" data-metric="feels">Feels</button>
+        <div class="seg" id="matrix-metric" role="group" data-i18n-label="matrix.metricGroup" aria-label="Matrix metric">
+          <button type="button" data-metric="temp" class="on" data-i18n="matrix.metric.temp">Temp</button>
+          <button type="button" data-metric="wind" data-i18n="matrix.metric.wind">Wind</button>
+          <button type="button" data-metric="precip" data-i18n="matrix.metric.precip">Precip</button>
+          <button type="button" data-metric="feels" data-i18n="matrix.metric.feels">Feels</button>
         </div>
-        <div class="seg" id="matrix-range" role="group" aria-label="Forecast range">
+        <div class="seg" id="matrix-range" role="group" data-i18n-label="matrix.rangeGroup" aria-label="Forecast range">
           <button type="button" data-hours="24">24h</button>
           <button type="button" data-hours="48" class="on">48h</button>
           <button type="button" data-hours="72">72h</button>
         </div>
       </div>
     </div>
-    <div class="matrix-scroll" tabindex="0" role="group" aria-label="Elevation and time matrix, horizontally scrollable"><div id="matrix"></div></div>
+    <div class="matrix-scroll" tabindex="0" role="group" data-i18n-label="matrix.scroll" aria-label="Elevation and time matrix, horizontally scrollable"><div id="matrix"></div></div>
     <div class="legend" id="matrix-legend"></div>
-    <p class="sub" style="margin-top:10px">Keyboard: <kbd>←</kbd> <kbd>→</kbd> step the selected hour.</p>
+    <p class="sub" style="margin-top:10px" data-i18n-html="matrix.keyboard">Keyboard: <kbd>←</kbd> <kbd>→</kbd> step the selected hour.</p>
   </section>
 
   <div class="split">
     <section class="card" id="profile-card">
       <div class="card-head">
         <div>
-          <h2>Vertical profile</h2>
+          <h2 data-i18n="profile.title">Vertical profile</h2>
           <p class="sub" id="profile-sub">Sounding-derived temperature, cloud base and wind through the mountain.</p>
         </div>
       </div>
@@ -83,7 +84,7 @@
     </section>
 
     <section class="card" id="intel-card">
-      <div class="card-head"><div><h2>Mountain intel</h2><p class="sub">Snapshot for the selected hour.</p></div></div>
+      <div class="card-head"><div><h2 data-i18n="intel.title">Mountain intel</h2><p class="sub" data-i18n="intel.sub">Snapshot for the selected hour.</p></div></div>
       <div class="intel-grid" id="intel"></div>
     </section>
   </div>
@@ -91,67 +92,57 @@
   <section class="card" id="obs-card">
     <div class="card-head">
       <div>
-        <h2>Ground truth</h2>
-        <p class="sub">Live readings from the nearest SMHI stations, and how the forecast compares against them right now.</p>
+        <h2 data-i18n="obs.title">Ground truth</h2>
+        <p class="sub" data-i18n="obs.sub">Live readings from the nearest SMHI stations, and how the forecast compares against them right now.</p>
       </div>
     </div>
-    <div id="observations"><p class="sub">Reading the stations…</p></div>
+    <div id="observations"><p class="sub" data-i18n="obs.reading">Reading the stations…</p></div>
   </section>
 
   <section class="card" id="hourly-card">
     <div class="card-head">
       <div>
-        <h2>Hourly at <span id="band-label" class="hl">summit</span></h2>
-        <p class="sub">Ensemble spread (p10–p90) around the machine-corrected forecast.</p>
+        <h2><span data-i18n="hourly.title">Hourly at</span> <span id="band-label" class="hl">summit</span></h2>
+        <p class="sub" data-i18n="hourly.sub">Ensemble spread (p10–p90) around the machine-corrected forecast.</p>
       </div>
-      <div class="controls"><div class="seg small" id="band-picker" role="group" aria-label="Elevation band"></div></div>
+      <div class="controls"><div class="seg small" id="band-picker" role="group" data-i18n-label="hourly.bandGroup" aria-label="Elevation band"></div></div>
     </div>
     <div id="hourly"></div>
   </section>
 
   <div class="split">
     <section class="card" id="models-card">
-      <div class="card-head"><div><h2>Model agreement</h2><p class="sub" id="models-sub">Weighted by measured 45-day skill over this exact point.</p></div></div>
+      <div class="card-head"><div><h2 data-i18n="models.title">Model agreement</h2><p class="sub" id="models-sub">Weighted by measured 45-day skill over this exact point.</p></div></div>
       <div id="models"></div>
     </section>
 
     <section class="card" id="ml-card">
-      <div class="card-head"><div><h2>Learning log</h2><p class="sub">What the in-browser model learned and how much it actually helped.</p></div></div>
+      <div class="card-head"><div><h2 data-i18n="ml.title">Learning log</h2><p class="sub" data-i18n="ml.sub">What the in-browser model learned and how much it actually helped.</p></div></div>
       <div id="ml"></div>
     </section>
   </div>
 
   <section class="card method" id="method">
     <div class="card-head">
-      <div><h2>How this forecast is made</h2><p class="sub">No black boxes — the summary is here, every formula and licence is on the method page.</p></div>
-      <div class="controls"><a class="nav-link" href="methods.html">Full method, sources &amp; licences →</a></div>
+      <div><h2 data-i18n="method.title">How this forecast is made</h2><p class="sub" data-i18n="method.sub">No black boxes — the summary is here, every formula and licence is on the method page.</p></div>
+      <div class="controls"><a class="nav-link" href="methods.html" data-i18n="method.link">Full method, sources &amp; licences →</a></div>
     </div>
     <ol class="method-list">
-      <li><b>Six numerical weather models</b> are fetched per mountain from Open-Meteo: MET Norway MET Nordic (1&nbsp;km, the best model for Scandinavian terrain), DMI Harmonie AROME (2&nbsp;km), DWD ICON, ECMWF IFS, UKMO and NOAA GFS.</li>
-      <li><b>A real sounding, not a lapse-rate guess.</b> Temperature, humidity and wind on pressure levels from 1000&nbsp;hPa to 500&nbsp;hPa with their geopotential heights give the true vertical structure above the mountain — including inversions, where the summit is <i>warmer</i> than the village.</li>
-      <li><b>Elevation downscaling.</b> The sounding is anchored to the surface ensemble at model height, then interpolated to every 100&nbsp;m band. Wind is blended from surface to free atmosphere and multiplied by a terrain exposure factor. Precipitation gets an orographic enhancement with height.</li>
-      <li><b>Phase from wet-bulb temperature</b>, not air temperature — the physically correct way to place a snow line, then a temperature-dependent snow ratio converts millimetres to centimetres.</li>
-      <li><b>Machine learning, trained in your browser.</b> 45 days of archived forecasts from every model are scored against ERA5-Land reanalysis. A ridge regression learns the residual temperature and wind bias at this point; a logistic model calibrates precipitation probability; a softmax over measured error assigns each model its weight. Hold-out validation is reported honestly in the learning log — including when the correction does not help.</li>
-      <li><b>Ensemble probabilities</b> come from a 30+ member ICON-EU / GFS ensemble, giving the p10–p90 bands and the chance of precipitation.</li>
+      <li data-i18n-html="method.step1"><b>Six numerical weather models</b> are fetched per mountain from Open-Meteo: MET Norway MET Nordic (1&nbsp;km, the best model for Scandinavian terrain), DMI Harmonie AROME (2&nbsp;km), DWD ICON, ECMWF IFS, UKMO and NOAA GFS.</li>
+      <li data-i18n-html="method.step2"><b>A real sounding, not a lapse-rate guess.</b> Temperature, humidity and wind on pressure levels from 1000&nbsp;hPa to 500&nbsp;hPa with their geopotential heights give the true vertical structure above the mountain — including inversions, where the summit is <i>warmer</i> than the village.</li>
+      <li data-i18n-html="method.step3"><b>Elevation downscaling.</b> The sounding is anchored to the surface ensemble at model height, then interpolated to every 100&nbsp;m band. Wind is blended from surface to free atmosphere and multiplied by a terrain exposure factor. Precipitation gets an orographic enhancement with height.</li>
+      <li data-i18n-html="method.step4"><b>Phase from wet-bulb temperature</b>, not air temperature — the physically correct way to place a snow line, then a temperature-dependent snow ratio converts millimetres to centimetres.</li>
+      <li data-i18n-html="method.step5"><b>Machine learning, trained in your browser.</b> 45 days of archived forecasts from every model are scored against ERA5-Land reanalysis. A ridge regression learns the residual temperature and wind bias at this point; a logistic model calibrates precipitation probability; a softmax over measured error assigns each model its weight. Hold-out validation is reported honestly in the learning log — including when the correction does not help.</li>
+      <li data-i18n-html="method.step6"><b>Ensemble probabilities</b> come from a 30+ member ICON-EU / GFS ensemble, giving the p10–p90 bands and the chance of precipitation.</li>
     </ol>
-    <p class="disclaimer"><b>This is not an avalanche forecast.</b> Wind-loading and new-snow numbers are meteorological indices only. For avalanche danger in the Swedish fjäll always use <a href="https://www.lavinprognoser.se" target="_blank" rel="noopener">lavinprognoser.se</a>, and for official warnings <a href="https://www.smhi.se" target="_blank" rel="noopener">SMHI</a>. Mountain weather kills people who trust a screen over their eyes.</p>
+    <p class="disclaimer" data-i18n-html="method.disclaimer"><b>This is not an avalanche forecast.</b> Wind-loading and new-snow numbers are meteorological indices only. For avalanche danger in the Swedish fjäll always use <a href="https://www.lavinprognoser.se" target="_blank" rel="noopener">lavinprognoser.se</a>, and for official warnings <a href="https://www.smhi.se" target="_blank" rel="noopener">SMHI</a>. Mountain weather kills people who trust a screen over their eyes.</p>
   </section>
 
   <footer class="footer">
-    <p>Weather data served by <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>
-      under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC&nbsp;BY&nbsp;4.0</a>,
-      <b>modified</b> — values shown are downscaled, combined and bias-corrected by this site.
-      Source data from MET&nbsp;Norway, DMI, Deutscher&nbsp;Wetterdienst, ECMWF, the UK&nbsp;Met&nbsp;Office and NOAA;
-      reanalysis generated using Copernicus Climate Change Service information.
-      Observation data from <a href="https://opendata.smhi.se/metobs/introduction" target="_blank" rel="noopener">SMHI</a>
-      (<a href="https://www.smhi.se/data/om-smhis-data/villkor-for-anvandning" target="_blank" rel="noopener">CC&nbsp;BY&nbsp;4.0&nbsp;SE</a>), modified.
-      <a href="methods.html">Full sources, licences and every calculation →</a></p>
-    <p>Non-commercial use of the Open-Meteo free tier. Everything — fetching, downscaling and model
-      training — runs in your browser. No API key, no server, no cookies, no tracking. The only hosts
-      this page contacts are the two weather services themselves: Open-Meteo and SMHI.</p>
-    <p>Found a forecast that was wrong, or a peak that should be on the list?
-      <a href="methods.html#contact">Get in touch</a> — the email is behind a question so crawlers cannot lift it.</p>
-    <p class="tiny">Built for the Åre fjäll · elevations and coordinates are approximate summit positions · <span id="build-line"></span></p>
+    <p data-i18n-html="footer.attribution">placeholder</p>
+    <p data-i18n-html="footer.privacy">placeholder</p>
+    <p data-i18n-html="footer.contact">placeholder</p>
+    <p class="tiny"><span data-i18n="footer.builtFor">Built for the Åre fjäll · elevations and coordinates are approximate summit positions</span> · <span id="build-line"></span></p>
   </footer>
 </main>
 

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Where to go — ÅreWeather</title>
-<meta name="description" content="Every peak in the Åre fjäll scored side by side for the next week, for trail running and ski mountaineering.">
+<title data-i18n="page.compare.title">Where to go — ÅreWeather</title>
+<meta name="description" data-i18n-content="page.compare.description" content="Every peak in the Åre fjäll scored side by side for the next week, for trail running and ski mountaineering.">
 <meta name="theme-color" content="#06080b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M6 82 38 26l17 29 9-14 24 41z' fill='%234fd1ff'/%3E%3Cpath d='M38 26l10 18-10 8-9-7z' fill='%23fff'/%3E%3C/svg%3E">
@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<a class="skip-link" href="#picks">Skip to the recommendations</a>
+<a class="skip-link" href="#picks" data-i18n="nav.skipPicks">Skip to the recommendations</a>
 <div class="aurora" aria-hidden="true"><span class="a1"></span><span class="a2"></span><span class="a3"></span></div>
 <div class="grain" aria-hidden="true"></div>
 
@@ -20,12 +20,13 @@
   <div class="wrap topbar-inner">
     <a class="brand" href="./">
       <svg class="brand-mark" viewBox="0 0 100 100" aria-hidden="true"><path d="M4 84 38 24l17 30 9-15 28 45z"/><path d="M38 24l10 18-10 9-9-8z" class="snow"/></svg>
-      <span class="brand-text">ÅRE<b>WEATHER</b><i>where to go</i></span>
+      <span class="brand-text">ÅRE<b>WEATHER</b><i data-i18n="brand.compare">where to go</i></span>
     </a>
     <div class="topbar-actions">
-      <a class="nav-link" href="./">← One peak</a>
-      <button type="button" class="status-pill" id="status-pill" title="Data status — click to refresh">
-        <span class="dot"></span><span id="status-text" role="status" aria-live="polite">Loading…</span>
+      <div class="seg" id="lang-toggle" role="group" data-i18n-label="lang.group" aria-label="Language"></div>
+      <a class="nav-link" href="./" data-i18n="nav.onePeak">← One peak</a>
+      <button type="button" class="status-pill" id="status-pill" data-i18n-title="status.refresh" title="Data status — click to refresh">
+        <span class="dot"></span><span id="status-text" role="status" aria-live="polite" data-i18n="status.loading">Loading…</span>
       </button>
     </div>
   </div>
@@ -40,7 +41,7 @@
         <p class="sub" id="picks-sub">Every peak, scored hour by hour for the next seven days, and the best window on each.</p>
       </div>
       <div class="controls">
-        <div class="seg seg-wrap" id="activity" role="group" aria-label="Activity"></div>
+        <div class="seg seg-wrap" id="activity" role="group" data-i18n-label="compare.activityGroup" aria-label="Activity"></div>
       </div>
     </div>
     <div class="picks" id="picks-grid"></div>
@@ -50,41 +51,32 @@
   <section class="card" id="grid-card">
     <div class="card-head">
       <div>
-        <h2>All peaks, all week</h2>
-        <p class="sub">Each cell is the best window that day, and its score — three hours for a run, eight for a hut-to-hut stage, after dark for the aurora. Click one to open that mountain.</p>
+        <h2 data-i18n="compare.gridTitle">All peaks, all week</h2>
+        <p class="sub" data-i18n="compare.gridSub">Each cell is the best window that day, and its score.</p>
       </div>
       <div class="controls">
-        <div class="seg" id="sort" role="group" aria-label="Sort order">
-          <button type="button" data-sort="best" class="on" aria-pressed="true">Best first</button>
-          <button type="button" data-sort="height" aria-pressed="false">By height</button>
-          <button type="button" data-sort="name" aria-pressed="false">A–Z</button>
+        <div class="seg" id="sort" role="group" data-i18n-label="compare.sortGroup" aria-label="Sort order">
+          <button type="button" data-sort="best" class="on" aria-pressed="true" data-i18n="compare.sort.best">Best first</button>
+          <button type="button" data-sort="height" aria-pressed="false" data-i18n="compare.sort.height">By height</button>
+          <button type="button" data-sort="name" aria-pressed="false" data-i18n="compare.sort.name">A–Z</button>
         </div>
       </div>
     </div>
-    <div class="grid-scroll" tabindex="0" role="group" aria-label="Comparison grid, horizontally scrollable">
+    <div class="grid-scroll" tabindex="0" role="group" data-i18n-label="compare.scroll" aria-label="Comparison grid, horizontally scrollable">
       <table class="compare" id="grid"></table>
     </div>
     <div class="compare-legend" id="legend"></div>
   </section>
 
   <section class="card">
-    <div class="card-head"><div><h2>What this view does differently</h2></div></div>
-    <p class="sub" style="max-width:78ch">
-      Scoring ten peaks means ten sets of requests, so this page deliberately fetches less per
-      mountain than the single-peak view: surface fields from all six models, plus snow depth and
-      freezing level, but no pressure-level sounding. Summit temperature and wind are identical
-      either way — the sounding is anchored to the surface ensemble at exactly summit height — but
-      the cloud-base estimate is rougher here, so a <i>summit in cloud</i> penalty can differ by a
-      few points from the detail page. Open a peak for the full calculation.
-      <a href="methods.html">How the scores are built →</a>
-    </p>
+    <div class="card-head"><div><h2 data-i18n="compare.differentTitle">What this view does differently</h2></div></div>
+    <p class="sub" style="max-width:78ch"><span data-i18n="compare.different">…</span>
+      <a href="methods.html" data-i18n="compare.differentLink">How the scores are built →</a></p>
   </section>
 
   <footer class="footer">
-    <p>Weather data served by <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>
-      under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC&nbsp;BY&nbsp;4.0</a>,
-      <b>modified</b>. <a href="methods.html">Full sources, licences and every calculation →</a></p>
-    <p class="tiny">Scores are opinions, not measurements — the thresholds are on the method page. This is not an avalanche forecast.</p>
+    <p data-i18n-html="footer.attributionShort">placeholder</p>
+    <p class="tiny" data-i18n="footer.scoresOpinion">placeholder</p>
   </footer>
 </main>
 

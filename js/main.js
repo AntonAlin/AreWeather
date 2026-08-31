@@ -12,6 +12,7 @@ import {
 import { parseStationSet, buildObservations } from './observations.js';
 import { SMHI } from './config.js';
 import { $, $$, el, store, clamp, ago, nowIsoHour } from './util.js';
+import { t, applyTranslations, renderLangToggle } from './i18n.js';
 
 const NS = `areweather.${APP.version}`;
 const tip = tooltip();
@@ -47,7 +48,7 @@ async function load(id, { force = false } = {}) {
   renderRail($('#mountain-rail'), id, (next) => load(next));
   const mtn = MOUNTAINS.find((m) => m.id === id);
   document.title = `${mtn.name} — ÅreWeather`;
-  setStatus('working', 'Fetching models…');
+  setStatus('working', t('status.fetching'));
 
   let surface;
   try {
@@ -109,24 +110,23 @@ async function loadObservations() {
     const node = $('#observations');
     node.textContent = '';
     const box = el('div', { class: 'obs-empty' }, node);
-    box.innerHTML = `<b>SMHI's observation service did not answer.</b> `
-      + 'The forecast above is unaffected — this panel is a cross-check, not an input. '
-      + `${navigator.onLine
-        ? 'If this persists, the station API is either down or refusing browser requests from this domain.'
-        : 'You are offline.'}`
-      + `<br><span class="muted" style="font-size:.9em">${err?.message ?? 'unknown error'}</span>`;
+    box.innerHTML = t('obs.failed')
+      + t(navigator.onLine ? 'obs.failedOnline' : 'obs.failedOffline')
+      + `<br><span class="muted" style="font-size:.9em">${err?.message ?? t('error.unknown')}</span>`;
   }
 }
 
 function fatal(mtn, err) {
-  setStatus('error', 'Offline');
+  setStatus('error', t('status.error'));
   const hero = $('#hero');
   hero.textContent = '';
   const box = el('div', { class: 'error-box' }, hero);
   box.style.margin = '20px';
-  box.innerHTML = `<b>Could not reach the weather service for ${mtn.name}.</b>
-    ${navigator.onLine ? 'Open-Meteo did not answer' : 'You appear to be offline'} — ${err?.message ?? 'unknown error'}.
-    Nothing is cached for this peak yet, so there is nothing to fall back on. Try again, or pick a mountain you have loaded before.`;
+  box.innerHTML = t('error.fatal', {
+    mtn: mtn.name,
+    reason: navigator.onLine ? t('error.noAnswer') : t('error.offline'),
+    message: err?.message ?? t('error.unknown'),
+  });
 }
 
 /* ---------- machine learning, off the critical path ---------- */
@@ -175,17 +175,15 @@ function renderAll() {
   renderModels($('#models'), m, state);
   renderML($('#ml'), m);
   renderBandPicker($('#band-picker'), m, state, pickBand);
-  $('#band-label').textContent = state.bandZ === m.mtn.summit ? 'the summit' : `${state.bandZ} m`;
+  $('#band-label').textContent = state.bandZ === m.mtn.summit ? t('hourly.summit') : t('hourly.band', { z: state.bandZ });
   renderLegend($('#matrix-legend'), state.metric, state.unit);
   $('#matrix-sub').textContent = m.haveProfile
-    ? `Every ${APP.bandStep} m of ${m.mtn.name}, hour by hour, downscaled from a ${m.profileModels.length}-model sounding.`
-    : `Every ${APP.bandStep} m of ${m.mtn.name}, hour by hour. No sounding available right now — using a constant lapse rate.`;
-  $('#profile-sub').textContent = m.hours[state.selected]?.haveSounding
-    ? 'Model sounding interpolated to the mountain, anchored to the surface ensemble.'
-    : 'No pressure-level data for this hour — showing the lapse-rate fallback.';
+    ? t('matrix.sub', { step: APP.bandStep, mtn: m.mtn.name, n: m.profileModels.length })
+    : t('matrix.subNoProfile', { step: APP.bandStep, mtn: m.mtn.name });
+  $('#profile-sub').textContent = m.hours[state.selected]?.haveSounding ? t('profile.sub') : t('profile.subFallback');
   $('#models-sub').textContent = m.ml?.skill?.length
-    ? `Weighted by measured ${APP.trainingDays}-day skill over this exact point.`
-    : 'Weighted by native grid resolution until the skill training finishes.';
+    ? t('models.sub', { days: APP.trainingDays })
+    : t('models.subPrior');
   drawCharts();
 }
 
@@ -205,7 +203,7 @@ function drawCharts() {
       renderIntel($('#intel'), m, state);
       renderModels($('#models'), m, state);
       renderBandPicker($('#band-picker'), m, state, pickBand);
-      $('#band-label').textContent = state.bandZ === m.mtn.summit ? 'the summit' : `${state.bandZ} m`;
+      $('#band-label').textContent = state.bandZ === m.mtn.summit ? t('hourly.summit') : t('hourly.band', { z: state.bandZ });
       drawProfile();
       drawHourly();
     },
@@ -220,7 +218,7 @@ function drawCharts() {
 
 function pickBand(z) {
   state.bandZ = z;
-  $('#band-label').textContent = z === state.model.mtn.summit ? 'the summit' : `${z} m`;
+  $('#band-label').textContent = z === state.model.mtn.summit ? t('hourly.summit') : t('hourly.band', { z });
   renderBandPicker($('#band-picker'), state.model, state, pickBand);
   drawHourly();
 }
@@ -253,10 +251,10 @@ function drawHourly() {
 }
 
 function status() {
-  if (state.training) return setStatus('working', 'Training on 45 days…');
-  if (!navigator.onLine) return setStatus('stale', `Offline · ${ago(state.cachedAt)}`);
-  if (state.stale) return setStatus('stale', `Cached · ${ago(state.cachedAt)}`);
-  setStatus('live', `Live · ${ago(state.cachedAt)}`);
+  if (state.training) return setStatus('working', t('status.training'));
+  if (!navigator.onLine) return setStatus('stale', t('status.offline', { age: ago(state.cachedAt) }));
+  if (state.stale) return setStatus('stale', t('status.cached', { age: ago(state.cachedAt) }));
+  setStatus('live', t('status.live', { age: ago(state.cachedAt) }));
 }
 
 /* ---------- events ---------- */
@@ -309,10 +307,10 @@ function wire() {
   addEventListener('online', () => load(state.mountainId, { force: true }));
   addEventListener('offline', status);
 
-  let t;
+  let resizeTimer;
   addEventListener('resize', () => {
-    clearTimeout(t);
-    t = setTimeout(() => { drawProfile(); drawHourly(); }, 160);
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { drawProfile(); drawHourly(); }, 160);
   });
   setInterval(status, 60e3);
 }
@@ -320,7 +318,16 @@ function wire() {
 /* ---------- go ---------- */
 press($$('#unit-toggle button'), $$('#unit-toggle button').find((b) => b.dataset.unit === state.unit));
 for (const group of ['#matrix-metric', '#matrix-range']) press($$(`${group} button`), $(`${group} button.on`));
-$('#build-line').textContent = `${APP.version} · ${MOUNTAINS.length} peaks · data cached in this browser`;
+$('#build-line').textContent = t('footer.build', { version: APP.version, n: MOUNTAINS.length });
+/* Language: translate the static markup, then re-render everything JavaScript
+   built. Switching never refetches — the assembled model is language-free. */
+applyTranslations();
+renderLangToggle($('#lang-toggle'), () => {
+  applyTranslations();
+  if (state.model) renderAll();
+  status();
+});
+
 wire();
 load(initialMountain());
 
