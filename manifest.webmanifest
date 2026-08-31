@@ -1,0 +1,19 @@
+{
+  "name": "ÅreWeather — fjäll forecast engine",
+  "short_name": "ÅreWeather",
+  "description": "Elevation-resolved mountain weather for the Åre fjäll, built for trail running and ski mountaineering.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#06080b",
+  "theme_color": "#06080b",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%2306080b'/%3E%3Cpath d='M40 420 190 130l85 148 45-70 140 212z' fill='%234fd1ff'/%3E%3Cpath d='M190 130l50 88-50 44-45-38z' fill='%23fff'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
