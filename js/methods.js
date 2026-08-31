@@ -235,9 +235,9 @@ gate.addEventListener('submit', async (ev) => {
   }
   msg.className = 'gate-msg good';
   msg.textContent = 'Decrypted.';
-  const link = $('#revealed-mail');
-  link.textContent = address;
-  link.href = `mailto:${address}?subject=${encodeURIComponent(CONTACT.subject)}`;
+  const mailLink = $('#revealed-mail');
+  mailLink.textContent = address;
+  mailLink.href = `mailto:${address}?subject=${encodeURIComponent(CONTACT.subject)}`;
   $('#revealed').hidden = false;
   $('#copy-mail').addEventListener('click', async () => {
     try {

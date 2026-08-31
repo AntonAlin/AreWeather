@@ -398,6 +398,68 @@ export function scoreSkimo(h) {
   return finish(depth === null ? score - 6 : score, hits);
 }
 
+/**
+ * Collapse an assembled forecast into one summary per calendar day: the best
+ * window to be out, and what the day looks like at the summit.
+ *
+ * Today is measured from `fromIndex` onwards — a morning that has already
+ * happened should not win you a recommendation at four in the afternoon.
+ */
+export function dailySummaries(model, activity, { windowLen = 3, fromIndex = 0 } = {}) {
+  const byDate = new Map();
+  for (let i = Math.max(0, fromIndex); i < model.hours.length; i++) {
+    const h = model.hours[i];
+    const key = h.iso.slice(0, 10);
+    if (!byDate.has(key)) byDate.set(key, []);
+    byDate.get(key).push(h);
+  }
+
+  const out = [];
+  for (const [date, hs] of byDate) {
+    const daylight = hs.filter((h) => h.daylight);
+    const pool = daylight.length >= windowLen ? daylight : hs;
+    let best = null;
+    for (let i = 0; i + windowLen <= pool.length; i++) {
+      const slice = pool.slice(i, i + windowLen);
+      // Only contiguous hours count as a window.
+      if (slice[windowLen - 1].i - slice[0].i !== windowLen - 1) continue;
+      const score = mean(slice.map((h) => h[activity].score));
+      if (!best || score > best.score) {
+        best = {
+          score,
+          startTime: slice[0].time,
+          endTime: slice[windowLen - 1].time,
+          dark: !slice.every((h) => h.daylight),
+          why: slice[Math.floor(windowLen / 2)][activity].why,
+          label: slice[Math.floor(windowLen / 2)][activity].label,
+          hour: slice[Math.floor(windowLen / 2)],
+        };
+      }
+    }
+    if (!best && hs.length) {
+      const h = hs[0];
+      best = { score: h[activity].score, startTime: h.time, endTime: h.time, dark: !h.daylight, why: h[activity].why, label: h[activity].label, hour: h };
+    }
+    const temps = hs.map((h) => h.summit.temp).filter(Number.isFinite);
+    const winds = hs.map((h) => h.summit.wind).filter(Number.isFinite);
+    out.push({
+      date,
+      time: hs[0].time,
+      hours: hs,
+      best,
+      partial: hs.length < 20,
+      tMax: temps.length ? Math.max(...temps) : NaN,
+      tMin: temps.length ? Math.min(...temps) : NaN,
+      windMax: winds.length ? Math.max(...winds) : NaN,
+      precip: hs.reduce((a, h) => a + (h.summit.precip || 0), 0),
+      newSnow: hs.reduce((a, h) => a + (h.summit.snowCm || 0), 0),
+      sunrise: model.daily.find((d) => d.date === date)?.sunrise ?? null,
+      sunset: model.daily.find((d) => d.date === date)?.sunset ?? null,
+    });
+  }
+  return out;
+}
+
 /** Best contiguous daylight window of `len` hours for an activity.
  *  Returns Date objects, or null when there is nothing to choose from. */
 export function bestWindow(hours, activity, { len = 4, within = 48 } = {}) {

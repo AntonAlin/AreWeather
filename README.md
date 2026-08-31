@@ -34,6 +34,10 @@ day the summit is *warmer* than the village. This app forecasts every 100 m band
 - **Ensemble probabilities** from a 20–30 member ICON-EU / GFS ensemble for the p10–p90 bands.
 - **Activity verdicts** for trail running and ski mountaineering, each with the specific factor
   that is limiting it and the best window in the next 48 hours.
+- **A comparison view** answering the question people actually have — *where should I go on
+  Saturday?* — by scoring all ten peaks across the next seven days in one grid, with the best
+  three-hour daylight window on each day. Two small requests per peak, three at a time, sharing the
+  same cache as the detail view, and switching activity re-scores without refetching anything.
 - **Works with no signal.** The last forecast for each peak is cached in `localStorage` and a
   service worker caches the app shell, so the page opens at the trailhead and tells you how old
   the data is.
@@ -88,7 +92,9 @@ thresholds, snow-drift threshold — are all together in the `PHYS` block of the
 ## Layout
 
 ```
-index.html          shell
+index.html          single-peak forecast
+compare.html        all ten peaks, scored side by side for the week
+methods.html        every calculation, source and licence
 styles.css          design system
 js/config.js        peaks, models, endpoints, physical tunables
 js/api.js           Open-Meteo fetching, progressive fallback, caching
@@ -97,7 +103,9 @@ js/ml.js            ridge / logistic regression, model skill weighting, validati
 js/forecast.js      assembles everything into one view model, activity scoring
 js/charts.js        hand-rolled SVG: elevation matrix, vertical profile, hourly
 js/ui.js            panels
-js/main.js          state and wiring
+js/main.js          state and wiring for the single-peak view
+js/compare.js       state and wiring for the comparison view
+js/methods.js       renders the method page from the live configuration
 sw.js               offline app shell
 tools/selftest.mjs  offline physics + ML test harness
 ```

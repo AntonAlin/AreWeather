@@ -136,6 +136,27 @@ export function fetchProfile(mtn, opts) {
   }, opts);
 }
 
+/**
+ * The handful of extra fields the overview needs but the surface request cannot
+ * carry: snow depth and freezing level exist only on the high-resolution models,
+ * and asking all six for them would fail the whole request.
+ *
+ * Deliberately tiny — the comparison view issues this for every peak, so it has
+ * to stay cheap. The response has the same shape as the profile response, which
+ * is why `assemble` accepts it in the same slot.
+ */
+export function fetchAux(mtn, opts) {
+  const base = { ...COMMON, latitude: mtn.lat, longitude: mtn.lon, forecast_days: APP.forecastDays };
+  return withCache(`aux.${mtn.id}`, TTL.forecast, async () => {
+    const { data, params } = await tryVariants(ENDPOINTS.forecast, [
+      { ...base, hourly: ['snow_depth', 'freezing_level_height', 'cloud_cover_low'], models: PROFILE_MODELS },
+      { ...base, hourly: ['snow_depth', 'freezing_level_height'], models: PROFILE_MODELS },
+      { ...base, hourly: ['freezing_level_height'], models: ['gfs_seamless'] },
+    ], 20000);
+    return { ...data, _models: params.models ? String(params.models).split(',') : ['best_match'] };
+  }, opts);
+}
+
 /** Ensemble members for probabilistic spread. First system that answers wins. */
 export function fetchEnsemble(mtn, opts) {
   const base = {

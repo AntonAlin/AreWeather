@@ -7,7 +7,7 @@
    Run: node tools/selftest.mjs */
 
 import { MODELS, PRESSURE_LEVELS, SCORING, SOURCES } from '../js/config.js';
-import { assemble, bandsFor, scoreTrail, scoreSkimo } from '../js/forecast.js';
+import { assemble, bandsFor, scoreTrail, scoreSkimo, dailySummaries } from '../js/forecast.js';
 import { train, correctTemperature, modelWeights } from '../js/ml.js';
 import { wetBulb, dewPoint, windChill, snowRatio, buildSounding, temperatureAt } from '../js/physics.js';
 
@@ -235,7 +235,36 @@ console.log('\nMachine learning');
     `${before.hours[5].summit.temp.toFixed(2)} → ${after.hours[5].summit.temp.toFixed(2)}`);
 }
 
-/* ---------- 7. configuration integrity ---------- */
+/* ---------- 7. daily summaries (the comparison view) ---------- */
+console.log('\nDaily summaries');
+{
+  const times = makeTimes(24 * 5);
+  const model = assemble(MTN, {
+    surface: makeSurface(times), profile: makeProfile(times), ensemble: null, ml: null,
+  });
+  const days = dailySummaries(model, 'trail');
+  ok(days.length === 5 || days.length === 6, `one summary per calendar day (${days.length})`);
+  ok(days.every((d) => Number.isFinite(d.best.score)), 'every day has a scored best window');
+  ok(days.every((d) => d.best.endTime >= d.best.startTime), 'windows do not run backwards');
+  ok(days.every((d) => d.best.score >= Math.min(...d.hours.map((h) => h.trail.score)) - 0.01), 'best window is not worse than the worst hour');
+  ok(days.every((d) => d.best.score <= Math.max(...d.hours.map((h) => h.trail.score)) + 0.01), 'best window is not better than the best hour');
+  ok(days.every((d) => d.precip >= 0 && d.newSnow >= 0), 'daily accumulations are non-negative');
+  ok(days.every((d) => !Number.isFinite(d.tMax) || d.tMax >= d.tMin), 'daily maximum is not below the minimum');
+
+  // Windows must be contiguous hours, not a stitched-together best-of.
+  const spans = days.map((d) => (d.best.endTime - d.best.startTime) / 3.6e6);
+  ok(spans.every((s2) => s2 === 2 || s2 === 0), `3-hour windows span exactly 2 hours end to end (${[...new Set(spans)].join(', ')})`);
+
+  // Hours already past must not win today a recommendation.
+  const late = dailySummaries(model, 'trail', { fromIndex: 20 });
+  ok(late[0].hours.every((h) => h.i >= 20), 'fromIndex excludes hours that have already happened');
+  ok(late[0].partial === true, 'a part-day is flagged as partial');
+
+  const ski = dailySummaries(model, 'skimo');
+  ok(ski.length === days.length && ski.every((d) => Number.isFinite(d.best.score)), 'the same works for ski mountaineering');
+}
+
+/* ---------- 8. configuration integrity ---------- */
 console.log('\nConfiguration');
 {
   const times = makeTimes(24);
@@ -259,7 +288,7 @@ console.log('\nConfiguration');
   ok(SOURCES.providers.every((p) => p.licence && p.credit && p.licenceUrl), 'every provider has a licence, a credit line and a licence link');
 }
 
-/* ---------- 8. degraded inputs ---------- */
+/* ---------- 9. degraded inputs ---------- */
 console.log('\nGraceful degradation');
 {
   const times = makeTimes(24);

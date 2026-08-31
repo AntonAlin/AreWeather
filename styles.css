@@ -375,3 +375,55 @@ main.wrap { display: flex; flex-direction: column; gap: 18px; padding: 22px 0 64
 .skip-link:focus { top: 0; }
 :focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; border-radius: 6px; }
 .seg button:focus-visible, .mtn-chip:focus-visible { outline-offset: 3px; }
+
+/* ---------- comparison view ---------- */
+.picks { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.pick {
+  position: relative; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 15px 16px; background: rgba(255,255,255,.03); text-decoration: none; color: inherit;
+  display: block; transition: .2s; overflow: hidden;
+}
+.pick:hover { background: rgba(255,255,255,.07); transform: translateY(-2px); border-color: rgba(255,255,255,.2); }
+.pick::after { content: ''; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--tone, var(--ice)); }
+.pick .rank { font-family: var(--mono); font-size: .6rem; letter-spacing: .2em; color: var(--text-3); text-transform: uppercase; }
+.pick .name { font-size: 1.08rem; font-weight: 650; letter-spacing: -.025em; margin: 3px 0 1px; }
+.pick .when { font-family: var(--mono); font-size: .76rem; color: var(--ice); }
+.pick .score { position: absolute; top: 13px; right: 15px; font-family: var(--mono); font-size: 1.5rem; font-weight: 600; line-height: 1; }
+.pick .why { font-size: .75rem; color: var(--text-2); margin-top: 8px; }
+.pick .why b { color: var(--text); font-weight: 550; }
+
+.grid-scroll { overflow-x: auto; margin: 0 -4px; padding: 0 4px 4px; }
+table.compare { border-collapse: separate; border-spacing: 0; width: 100%; }
+table.compare th, table.compare td { padding: 0; }
+table.compare thead th {
+  position: sticky; top: 0; z-index: 3; background: #0a0d13;
+  font-size: .6rem; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3);
+  font-weight: 500; text-align: center; padding: 0 0 9px; white-space: nowrap;
+}
+table.compare thead th.today { color: var(--ice); }
+table.compare thead th small { display: block; font-size: .92em; letter-spacing: .08em; color: var(--text-3); opacity: .7; }
+table.compare th.peak-head { text-align: left; z-index: 4; left: 0; padding-right: 14px; }
+table.compare td.peak, table.compare th.peak-head { position: sticky; left: 0; background: linear-gradient(90deg, #080b10 78%, rgba(8,11,16,0)); z-index: 2; }
+table.compare td.peak { padding: 5px 16px 5px 0; min-width: 152px; }
+.peak-link { text-decoration: none; color: inherit; display: block; }
+.peak-link .pn { display: block; font-size: .84rem; font-weight: 600; letter-spacing: -.02em; }
+.peak-link:hover .pn { color: var(--ice); }
+.peak-link .pe { display: block; font-family: var(--mono); font-size: .62rem; color: var(--text-3); }
+
+.cell { display: block; width: 100%; padding: 7px 4px; border-radius: 9px; border: 1px solid transparent; background: none; transition: .16s; text-align: center; }
+.cell:hover { transform: scale(1.05); }
+.cell .s { display: block; font-family: var(--mono); font-size: 1.06rem; font-weight: 600; line-height: 1.15; }
+.cell .w { display: block; font-family: var(--mono); font-size: .58rem; color: var(--text-3); letter-spacing: .02em; margin-top: 1px; }
+.cell .w.dark { color: var(--amber); opacity: .85; }
+.cell.empty { color: var(--text-3); font-family: var(--mono); font-size: .8rem; }
+td.cell-wrap { padding: 3px; min-width: 78px; }
+.row-loading { display: flex; align-items: center; gap: 8px; font-size: .74rem; color: var(--text-3); padding: 8px 0; }
+.row-loading i { width: 100%; height: 34px; border-radius: 9px; display: block; background: linear-gradient(90deg, rgba(255,255,255,.04), rgba(255,255,255,.1), rgba(255,255,255,.04)); background-size: 220% 100%; animation: shimmer 1.5s infinite; }
+.row-error { font-size: .72rem; color: var(--amber); font-family: var(--mono); }
+
+.compare-legend { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin-top: 14px; font-size: .68rem; color: var(--text-2); }
+.compare-legend .key { display: inline-flex; align-items: center; gap: 6px; }
+.compare-legend .swatches { display: flex; gap: 3px; }
+.compare-legend .swatches i { width: 26px; height: 8px; border-radius: 2px; display: block; }
+.progress { height: 2px; background: rgba(255,255,255,.08); border-radius: 2px; overflow: hidden; margin-top: 4px; }
+.progress i { display: block; height: 100%; background: var(--grad); transition: width .3s; }
