@@ -227,6 +227,15 @@ export const SOURCES = {
       url: 'https://www.nco.ncep.noaa.gov/pmb/products/gfs/', licenceUrl: 'https://www.weather.gov/disclaimer',
     },
   ],
+  observations: {
+    name: 'SMHI open data — meteorological observations',
+    org: 'Sveriges meteorologiska och hydrologiska institut (SMHI)',
+    licence: 'Creative Commons Erkännande 4.0 SE (CC BY 4.0)',
+    credit: 'Observation data from SMHI',
+    url: 'https://opendata.smhi.se/metobs/introduction',
+    licenceUrl: 'https://www.smhi.se/data/om-smhis-data/villkor-for-anvandning',
+    note: 'Live station readings, used to sanity-check the forecast. Never blended into it.',
+  },
   ensemble: {
     name: 'ICON-EU EPS / GFS ensemble', org: 'DWD and NOAA',
     note: 'Used only for the p10–p90 spread and the probability of precipitation.',
@@ -244,6 +253,47 @@ export const SOURCES = {
     { name: 'Inter', author: 'The Inter Project Authors', licence: 'SIL Open Font License 1.1', url: 'https://rsms.me/inter/', file: 'fonts/LICENSE-Inter.txt' },
     { name: 'JetBrains Mono', author: 'JetBrains', licence: 'SIL Open Font License 1.1', url: 'https://www.jetbrains.com/lp/mono/', file: 'fonts/LICENSE-JetBrainsMono.txt' },
   ],
+};
+
+
+/* ---------------------------------------------------------------------------
+   SMHI observations.
+
+   Actual thermometers, as a reality check on the models. Licensed CC BY 4.0 SE:
+   free to use and adapt, commercially too, as long as SMHI is credited and
+   changes are declared.
+
+   Their terms also ask that you use documented APIs only, and specifically that
+   you avoid mass-downloading per location or fetching the same data twice. So
+   this uses the `station-set/all` resource: one request returns the latest hour
+   for every station in Sweden, which is then cached and reused for every
+   mountain and both pages. Browsing all ten peaks costs the same five requests
+   as browsing one.
+--------------------------------------------------------------------------- */
+export const SMHI = {
+  base: 'https://opendata-download-metobs.smhi.se/api/version/1.0',
+  /** Parameters worth showing, in display order. Numbers are SMHI's own. */
+  parameters: [
+    { id: 1, key: 'temp', name: 'Air temperature', unit: '°C' },
+    { id: 4, key: 'wind', name: 'Wind speed', unit: 'm/s' },
+    { id: 3, key: 'dir', name: 'Wind direction', unit: '°' },
+    { id: 21, key: 'gust', name: 'Wind gust', unit: 'm/s' },
+    { id: 6, key: 'rh', name: 'Relative humidity', unit: '%' },
+  ],
+  /** How many nearby stations to show per mountain. */
+  show: 3,
+  /** Consider stations within this many kilometres. */
+  radiusKm: 60,
+  /**
+   * Station ranking. Distance dominates, but a station 800 m below the summit
+   * tells you less about the mountain than one at a similar height, so the
+   * elevation difference carries a cost too: `km + |Δz| / metresPerKm`.
+   */
+  metresPerKm: 120,
+  /** Observations older than this are shown as stale rather than current. */
+  maxAgeMinutes: 150,
+  /** Rolling verification log kept in this browser. */
+  logLimit: 600,
 };
 
 /* ---------------------------------------------------------------------------

@@ -1,14 +1,16 @@
 /* Application shell: state, loading, event wiring, redraw. */
 
 import { APP, MOUNTAINS } from './config.js';
-import { fetchSurface, fetchProfile, fetchEnsemble, fetchTraining, purgeCache } from './api.js';
+import { fetchSurface, fetchProfile, fetchEnsemble, fetchTraining, fetchObservations, purgeCache } from './api.js';
 import { train } from './ml.js';
 import { assemble } from './forecast.js';
 import { renderMatrix, renderProfile, renderHourly } from './charts.js';
 import {
   renderRail, renderHero, renderIntel, renderModels, renderML, renderLegend,
-  renderBandPicker, tooltip, cellTooltip, setStatus,
+  renderBandPicker, renderObservations, tooltip, cellTooltip, setStatus,
 } from './ui.js';
+import { parseStationSet, buildObservations } from './observations.js';
+import { SMHI } from './config.js';
 import { $, $$, el, store, clamp, ago, nowIsoHour } from './util.js';
 
 const NS = `areweather.${APP.version}`;
@@ -77,6 +79,39 @@ async function load(id, { force = false } = {}) {
 
   if (!ml || Date.now() - ml.trainedAt > APP.retrainAfterHours * 3600e3) {
     trainInBackground(mtn);
+  }
+  loadObservations();
+}
+
+/* ---------- SMHI observations ----------
+   Never on the critical path: the forecast is the product, this is the reality
+   check next to it. One request per parameter serves every mountain, so
+   switching peaks re-renders from the same cached station sets. */
+let stationSets = null;
+
+async function loadObservations() {
+  const mountainAtStart = state.mountainId;
+  try {
+    if (!stationSets) {
+      const results = await Promise.all(SMHI.parameters.map(
+        (p) => fetchObservations(p.id).then((r) => [p.key, parseStationSet(r.data)]).catch(() => [p.key, null]),
+      ));
+      const sets = Object.fromEntries(results.filter(([, v]) => v));
+      if (!Object.keys(sets).length) throw new Error('no station data');
+      stationSets = sets;
+    }
+    if (state.mountainId !== mountainAtStart || !state.model) return;
+    renderObservations($('#observations'), state.model, buildObservations(state.model, stationSets), state);
+  } catch (err) {
+    const node = $('#observations');
+    node.textContent = '';
+    const box = el('div', { class: 'obs-empty' }, node);
+    box.innerHTML = `<b>SMHI's observation service did not answer.</b> `
+      + 'The forecast above is unaffected — this panel is a cross-check, not an input. '
+      + `${navigator.onLine
+        ? 'If this persists, the station API is either down or refusing browser requests from this domain.'
+        : 'You are offline.'}`
+      + `<br><span class="muted" style="font-size:.9em">${err?.message ?? 'unknown error'}</span>`;
   }
 }
 

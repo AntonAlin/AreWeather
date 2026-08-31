@@ -9,11 +9,11 @@
    3. Units are pinned explicitly (m/s, mm, °C) — the API default for wind is
       km/h and silently inheriting that would be a real bug. */
 
-import { APP, ENDPOINTS, MODELS, PROFILE_MODELS, PRESSURE_LEVELS, ENSEMBLE_MODELS } from './config.js';
+import { APP, ENDPOINTS, MODELS, PROFILE_MODELS, PRESSURE_LEVELS, ENSEMBLE_MODELS, SMHI } from './config.js';
 import { store, isoDate, daysAgo } from './util.js';
 
 const NS = `areweather.${APP.version}`;
-const TTL = { forecast: 30 * 60e3, ensemble: 3 * 3600e3, training: 24 * 3600e3 };
+const TTL = { forecast: 30 * 60e3, ensemble: 3 * 3600e3, training: 24 * 3600e3, observations: 20 * 60e3 };
 
 export class ApiError extends Error {}
 
@@ -206,6 +206,19 @@ export function fetchTraining(mtn, opts) {
       range,
     };
   }, opts);
+}
+
+/**
+ * The latest hour of one observed parameter for every station in Sweden.
+ *
+ * One request per parameter serves every mountain and both pages — SMHI's terms
+ * ask specifically that you not fetch per location or repeat the same fetch, and
+ * this is the documented resource for exactly that. Cached for 20 minutes; the
+ * stations themselves only report hourly.
+ */
+export function fetchObservations(parameter, opts) {
+  const url = `${SMHI.base}/parameter/${parameter}/station-set/all/period/latest-hour/data.json`;
+  return withCache(`obs.${parameter}`, TTL.observations, () => getJSON(url, 25000), opts);
 }
 
 /* ---------- response helpers ---------- */

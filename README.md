@@ -32,6 +32,10 @@ day the summit is *warmer* than the village. This app forecasts every 100 m band
   block and **switched off automatically if it does not beat the raw ensemble** — the learning log
   panel reports that honestly either way.
 - **Ensemble probabilities** from a 20–30 member ICON-EU / GFS ensemble for the p10–p90 bands.
+- **A ground-truth panel** reading live SMHI station observations, showing what the nearest
+  thermometers actually report against what the forecast claims at their exact elevation — plus a
+  rolling verification log kept in your browser, so after a few days the app can state its own
+  measured bias at that peak. Observations are never blended into the forecast.
 - **Activity verdicts** for trail running and ski mountaineering, each with the specific factor
   that is limiting it and the best window in the next 48 hours.
 - **A comparison view** answering the question people actually have — *where should I go on
@@ -104,6 +108,7 @@ js/forecast.js      assembles everything into one view model, activity scoring
 js/charts.js        hand-rolled SVG: elevation matrix, vertical profile, hourly
 js/ui.js            panels
 js/main.js          state and wiring for the single-peak view
+js/observations.js  SMHI station selection, comparison and the verification log
 js/compare.js       state and wiring for the comparison view
 js/methods.js       renders the method page from the live configuration
 sw.js               offline app shell
@@ -125,6 +130,7 @@ configuration the forecast runs on, covering every formula and every licence. Th
 | [UK Met Office](https://registry.opendata.aws/met-office-global-deterministic/) | UM global 10 km | CC BY-**SA** upstream — see note | Contains public sector information licensed by the UK Met Office |
 | [NOAA/NCEP](https://www.weather.gov/disclaimer) | GFS | Public domain | Credit as a courtesy |
 | [Copernicus C3S](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land) | ERA5-Land, the ML training target | CC BY (since 2 Jul 2025) | Generated using Copernicus Climate Change Service information |
+| [SMHI](https://www.smhi.se/data/om-smhis-data/villkor-for-anvandning) | Live station observations | CC BY 4.0 SE | Observation data from SMHI |
 
 CC BY 4.0 requires three things and the site does all three, in the footer of both pages: credit the
 source, link the licence, and **state that changes were made** — which they emphatically are, since
@@ -148,7 +154,9 @@ if that date is old.
 ## Privacy
 
 - No analytics, cookies, accounts or logs — there is no server to log with.
-- The only external host contacted is `open-meteo.com`. Typefaces (Inter and JetBrains Mono, both
+- Exactly two external hosts are contacted, both weather services: `open-meteo.com` for forecasts
+  and `opendata-download-metobs.smhi.se` for station observations. No third-party fonts, scripts,
+  analytics or embeds of any kind. Typefaces (Inter and JetBrains Mono, both
   [OFL 1.1](fonts/)) are self-hosted specifically so that loading the page does not send visitors'
   IP addresses to a font CDN — relevant under GDPR for an EU-facing site.
 - `localStorage` holds the last forecast per mountain, the unit preference, and the trained weights.

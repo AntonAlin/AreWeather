@@ -39,7 +39,7 @@
     <div class="pill-row">
       <span class="pill ok">No tracking</span>
       <span class="pill ok">No cookies</span>
-      <span class="pill ok">No third-party requests</span>
+      <span class="pill ok">No trackers or third-party embeds</span>
       <span class="pill">Non-commercial</span>
       <span class="pill" id="verified-pill"></span>
     </div>
@@ -85,6 +85,10 @@
         <ul>
           <li><b>Non-commercial use only.</b> No subscriptions, no advertising, nothing sold. If
             this site ever carried ads or a paywall it would need a paid Open-Meteo plan.</li>
+          <li><b>SMHI asks the same of its open data:</b> use the documented APIs, do not
+            mass-download per location, and do not fetch the same data twice. The station readings
+            are therefore requested once for the whole country per parameter and reused for every
+            mountain and both pages, rather than once per peak.</li>
           <li><b>Under 10 000 API calls per day.</b> Worth understanding <i>whose</i> calls those
             are: this is a static site with no backend, so the requests come from each visitor's own
             browser and count against that visitor's own IP, not a shared server quota.</li>
@@ -104,15 +108,18 @@
         <ul>
           <li>No analytics, no cookies, no fingerprinting, no accounts, no logs — I have no server
             to log anything with.</li>
-          <li>The only external host contacted is <code>open-meteo.com</code>. Typefaces are
-            self-hosted precisely so that loading this page does not hand your IP address to a font
-            CDN.</li>
+          <li>Exactly two external hosts are contacted, and both are weather services:
+            <code>open-meteo.com</code> for forecasts and
+            <code>opendata-download-metobs.smhi.se</code> for station observations. No analytics, no
+            embeds, no third-party fonts or scripts of any kind — typefaces are self-hosted precisely
+            so that loading this page does not hand your IP address to a font CDN.</li>
           <li>Everything remembered is in your own browser's <code>localStorage</code>: the last
             forecast per mountain, your unit preference, and the trained correction weights. Clearing
             site data erases all of it. Nothing is ever sent anywhere.</li>
           <li>Open-Meteo receives the coordinates of the mountain you are looking at — a fixed
-            summit position from a public list, never your location. This app never asks for or
-            uses geolocation.</li>
+            summit position from a public list, never your location. SMHI receives no coordinates at
+            all: the station request is for the whole country and the nearest ones are picked in your
+            browser. This app never asks for or uses geolocation.</li>
         </ul>
       </section>
 
@@ -354,6 +361,31 @@ use the correction ⟺ MAE<sub>corrected</sub> &lt; 0.995 · MAE<sub>baseline</s
           effect. A correction trained this way makes the grid-scale forecast better; it cannot know
           that a particular gully funnels wind.
         </div>
+        <h3>Checking against thermometers</h3>
+        <p>Everything above is model output corrected against <i>another model's</i> best estimate of
+          the past. The ground-truth panel on the forecast page closes that loop with actual
+          instruments: SMHI's automatic stations, read live.</p>
+        <p>Stations are ranked by distance with a penalty for being at a very different height,
+          since a valley station 5 km away says less about a summit than a ridge station 12 km away:</p>
+        <div class="formula">
+          <div class="eq">cost = distance<sub>km</sub> + |<em>z</em><sub>station</sub> − <em>z</em><sub>summit</sub>| / <span data-const="SMHI.metresPerKm"></span></div>
+          <div class="cite">Distance is the great-circle distance. Stations beyond <span data-const="SMHI.radiusKm"></span> km are ignored entirely.</div>
+        </div>
+        <p>The forecast is then interpolated down the sounding to that station's exact elevation and
+          the hour it reported, and the two are put side by side. Every comparison is appended to a
+          rolling log in your browser — deduplicated by station and hour, capped at
+          <span data-const="SMHI.logLimit"></span> entries — so that after a few days of use the app
+          can show you its own measured bias at that peak, against a thermometer rather than a
+          reanalysis grid.</p>
+        <div class="callout warn">
+          <b>What this comparison is not.</b>
+          A station is a different <i>place</i>, not merely a different altitude of the same one. The
+          difference you see mixes genuine downscaling error with the unavoidable fact that the
+          weather 15 km away is different weather. It is a sanity check, not a verification — and
+          observations are never fed back into the forecast, because a valley thermometer cannot
+          correct a summit prediction without inventing information.
+        </div>
+
         <h3>Ensemble spread</h3>
         <div class="formula">
           <div class="eq">p10, p50, p90 = linearly interpolated quantiles over 20–40 ensemble members

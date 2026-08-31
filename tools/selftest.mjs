@@ -9,7 +9,9 @@
 import { MODELS, PRESSURE_LEVELS, SCORING, SOURCES } from '../js/config.js';
 import { assemble, bandsFor, scoreTrail, scoreSkimo, dailySummaries } from '../js/forecast.js';
 import { train, correctTemperature, modelWeights } from '../js/ml.js';
+import { distanceKm, parseStationSet, nearestStations, collectStation, compareWithModel, buildObservations } from '../js/observations.js';
 import { wetBulb, dewPoint, windChill, snowRatio, buildSounding, temperatureAt } from '../js/physics.js';
+import { round } from '../js/util.js';
 
 let failures = 0;
 const ok = (cond, msg, detail = '') => {
@@ -264,7 +266,70 @@ console.log('\nDaily summaries');
   ok(ski.length === days.length && ski.every((d) => Number.isFinite(d.best.score)), 'the same works for ski mountaineering');
 }
 
-/* ---------- 8. configuration integrity ---------- */
+/* ---------- 8. SMHI observations ---------- */
+console.log('\nObservations');
+{
+  const hourAgo = Date.now() - 40 * 60e3;
+  const set = (stations) => ({ station: stations.map(([key, name, lat, lon, height, value]) => ({
+    key, name, latitude: lat, longitude: lon, height,
+    value: [{ date: hourAgo, value: String(value), quality: 'G' }],
+  })) });
+
+  const temps = parseStationSet(set([
+    ['1', 'Åre valley', 63.40, 13.08, 380, -2.4],
+    ['2', 'High ridge', 63.33, 13.10, 1400, -8.1],
+    ['3', 'Östersund', 63.18, 14.63, 370, 1.2],
+    ['4', 'Far away', 60.00, 15.00, 100, 5.0],
+  ]));
+  ok(temps.size === 4, `parsed ${temps.size} stations from a station-set payload`);
+  ok(temps.get('1').value === -2.4 && temps.get('1').quality === 'G', 'latest value and quality flag are read');
+  ok(Number.isFinite(temps.get('2').at), 'observation timestamp is parsed');
+
+  const d = distanceKm(63.4262, 13.0665, 63.1792, 14.6357);
+  ok(near(d, 82, 12), `Åreskutan to Östersund is about 82 km (got ${Math.round(d)})`);
+  ok(near(distanceKm(63.4, 13.0, 63.4, 13.0), 0, 0.001), 'distance to itself is zero');
+
+  const near1 = nearestStations(MTN, temps);
+  ok(near1.length === 2, `only the stations inside the radius are returned (${near1.length})`);
+  ok(!near1.some((s2) => s2.name === 'Far away' || s2.name === 'Östersund'),
+    'stations beyond the 60 km radius are excluded, Östersund at 83 km included');
+  ok(near1[0].name === 'High ridge',
+    `a ridge station at summit height beats a closer valley station (${near1.map((s2) => s2.name).join(' < ')})`);
+  ok(near1.every((s2, i, arr) => i === 0 || arr[i - 1].cost <= s2.cost), 'ranking is ordered by cost');
+
+  const sets = {
+    temp: temps,
+    wind: parseStationSet(set([['2', 'High ridge', 63.33, 13.10, 1400, 12.5]])),
+    dir: parseStationSet(set([['2', 'High ridge', 63.33, 13.10, 1400, 270]])),
+  };
+  const merged = collectStation('2', sets);
+  ok(merged.temp.value === -8.1 && merged.wind.value === 12.5, 'readings merge across parameters for one station');
+  ok(collectStation('999', sets).temp === undefined, 'an unknown station yields nothing rather than throwing');
+
+  // Compare against a forecast whose summit is deliberately 3 degrees warm.
+  const times = makeTimes(48, new Date(Date.now() - 24 * 3600e3));
+  const model = assemble(MTN, {
+    surface: makeSurface(times, { baseTemp: -5.1 }), profile: makeProfile(times, { surfaceTemp: -5.1 }),
+    ensemble: null, ml: null,
+  });
+  const cmp = compareWithModel(model, near1[0], merged);
+  ok(cmp !== null, 'a comparison is produced for a recent observation');
+  ok(Number.isFinite(cmp.modelled.temp.delta), `temperature delta computed (${round(cmp.modelled.temp.delta, 2)}°)`);
+  ok(near(cmp.modelled.temp.delta, cmp.modelled.temp.model - (-8.1), 0.001), 'delta is model minus observed');
+  ok(cmp.elevation === 1400, 'the model is evaluated at the station elevation, not the summit');
+  ok(Number.isFinite(cmp.modelled.wind.delta), 'wind delta computed');
+  ok(Math.abs(cmp.modelled.dir.delta) <= 180, 'direction difference wraps to ±180°');
+
+  const stale = compareWithModel(model, near1[0], { temp: { value: 0, at: Date.now() - 9 * 3600e3 } });
+  ok(stale === null || stale.stale === true, 'an old reading is either unmatched or flagged stale');
+
+  const built = buildObservations(model, sets);
+  ok(built && built.stations.length >= 1, 'buildObservations assembles a card payload');
+  ok(built.reference.station.name === 'High ridge', 'the reference station is the best-ranked one that can be compared');
+  ok(buildObservations(model, { temp: new Map() }) === null, 'no stations at all yields null rather than an empty card');
+}
+
+/* ---------- 9. configuration integrity ---------- */
 console.log('\nConfiguration');
 {
   const times = makeTimes(24);
@@ -288,7 +353,7 @@ console.log('\nConfiguration');
   ok(SOURCES.providers.every((p) => p.licence && p.credit && p.licenceUrl), 'every provider has a licence, a credit line and a licence link');
 }
 
-/* ---------- 9. degraded inputs ---------- */
+/* ---------- 10. degraded inputs ---------- */
 console.log('\nGraceful degradation');
 {
   const times = makeTimes(24);

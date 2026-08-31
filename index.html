@@ -88,6 +88,16 @@
     </section>
   </div>
 
+  <section class="card" id="obs-card">
+    <div class="card-head">
+      <div>
+        <h2>Ground truth</h2>
+        <p class="sub">Live readings from the nearest SMHI stations, and how the forecast compares against them right now.</p>
+      </div>
+    </div>
+    <div id="observations"><p class="sub">Reading the stations…</p></div>
+  </section>
+
   <section class="card" id="hourly-card">
     <div class="card-head">
       <div>
@@ -133,9 +143,12 @@
       <b>modified</b> — values shown are downscaled, combined and bias-corrected by this site.
       Source data from MET&nbsp;Norway, DMI, Deutscher&nbsp;Wetterdienst, ECMWF, the UK&nbsp;Met&nbsp;Office and NOAA;
       reanalysis generated using Copernicus Climate Change Service information.
+      Observation data from <a href="https://opendata.smhi.se/metobs/introduction" target="_blank" rel="noopener">SMHI</a>
+      (<a href="https://www.smhi.se/data/om-smhis-data/villkor-for-anvandning" target="_blank" rel="noopener">CC&nbsp;BY&nbsp;4.0&nbsp;SE</a>), modified.
       <a href="methods.html">Full sources, licences and every calculation →</a></p>
     <p>Non-commercial use of the Open-Meteo free tier. Everything — fetching, downscaling and model
-      training — runs in your browser. No API key, no server, no cookies, no tracking, no third-party requests.</p>
+      training — runs in your browser. No API key, no server, no cookies, no tracking. The only hosts
+      this page contacts are the two weather services themselves: Open-Meteo and SMHI.</p>
     <p>Found a forecast that was wrong, or a peak that should be on the list?
       <a href="methods.html#contact">Get in touch</a> — the email is behind a question so crawlers cannot lift it.</p>
     <p class="tiny">Built for the Åre fjäll · elevations and coordinates are approximate summit positions · <span id="build-line"></span></p>

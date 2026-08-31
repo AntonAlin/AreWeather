@@ -278,6 +278,76 @@ export function renderML(node, model) {
   note2.innerHTML = `Reanalysis is a ~9 km grid estimate, not a summit weather station, so it captures systematic model bias rather than the last few hundred metres of local terrain effect. Retrains automatically every three days; weights live in this browser only.`;
 }
 
+/* ---------- observations ---------- */
+export function renderObservations(node, model, obs, state) {
+  node.textContent = '';
+  const u = windUnitLabel(state.unit);
+
+  if (!obs) {
+    const box = el('div', { class: 'obs-empty' }, node);
+    box.innerHTML = 'No station reported in the last few hours within '
+      + `${60} km of ${model.mtn.name}. The fjäll is thinly instrumented — this is normal in a storm, `
+      + 'when the stations that matter most are the ones that ice up.';
+    return;
+  }
+
+  const ref = obs.reference;
+  const cmp = ref.comparison;
+
+  /* The headline: is the forecast running warm or cold right now? */
+  const head = el('div', { class: 'obs-head' }, node);
+  if (cmp?.modelled?.temp && Number.isFinite(cmp.modelled.temp.delta)) {
+    const d = cmp.modelled.temp.delta;
+    const big = el('div', { class: 'obs-delta' }, head);
+    const sign = d > 0 ? '+' : '−';
+    big.innerHTML = `<span class="num">${sign}${round(Math.abs(d), 1)}°</span>`;
+    big.style.color = Math.abs(d) < 1 ? 'var(--lime)' : Math.abs(d) < 2.5 ? 'var(--amber)' : 'var(--rose)';
+    const txt = el('div', { class: 'obs-headline' }, head);
+    txt.innerHTML = `The forecast is running <b>${Math.abs(d) < 0.5 ? 'right on' : d > 0 ? 'warm' : 'cold'}</b> `
+      + `against <b>${ref.station.name}</b>, ${round(ref.station.km, 1)} km away at ${Math.round(ref.station.height)} m.<br>`
+      + `<span class="muted">Model ${round(cmp.modelled.temp.model, 1)}° at that height · station ${round(cmp.modelled.temp.observed, 1)}° · `
+      + `${cmp.stale ? `reading is ${Math.round(cmp.ageMin)} min old` : `${Math.round(cmp.ageMin)} min ago`}</span>`;
+  } else {
+    el('div', { class: 'obs-headline', text: 'Stations are reporting, but none close enough in time to compare against the forecast hour.' }, head);
+  }
+
+  /* Every nearby station, as raw readings. */
+  const list = el('div', { class: 'obs-list' }, node);
+  for (const s2 of obs.stations) {
+    const row = el('div', { class: 'obs-row' }, list);
+    const who = el('div', { class: 'obs-who' }, row);
+    el('span', { class: 'n', text: s2.station.name }, who);
+    el('span', { class: 'd', text: `${round(s2.station.km, 1)} km · ${Math.round(s2.station.height)} m` }, who);
+    const vals = el('div', { class: 'obs-vals' }, row);
+    const val = (v, unit2, label) => {
+      const cell = el('div', { class: 'obs-val' }, vals);
+      cell.innerHTML = `<span class="num">${v}</span><small>${unit2}</small><i>${label}</i>`;
+    };
+    val(Number.isFinite(s2.readings.temp?.value) ? round(s2.readings.temp.value, 1) : '–', '°C', 'temp');
+    val(Number.isFinite(s2.readings.wind?.value) ? fmtWind(s2.readings.wind.value, state.unit) : '–', u, 'wind');
+    val(Number.isFinite(s2.readings.gust?.value) ? fmtWind(s2.readings.gust.value, state.unit) : '–', u, 'gust');
+    val(Number.isFinite(s2.readings.dir?.value) ? compass(s2.readings.dir.value) : '–', '', 'from');
+    val(Number.isFinite(s2.readings.rh?.value) ? Math.round(s2.readings.rh.value) : '–', '%', 'hum');
+  }
+
+  /* The running scoreboard. */
+  const v = obs.verification;
+  const foot = el('p', { class: 'ml-note', style: 'margin-top:14px' }, node);
+  if (v?.n >= 3) {
+    const biasWord = Math.abs(v.bias) < 0.4 ? 'no consistent bias' : v.bias > 0 ? `running ${round(v.bias, 1)}° warm` : `running ${round(Math.abs(v.bias), 1)}° cold`;
+    foot.innerHTML = `<b>Verification kept in this browser:</b> ${v.n} hours logged over ${round(v.days, 1)} days against `
+      + `${ref.station.name} — mean error <code>${round(v.bias, 2)}°</code> (${biasWord}), absolute error <code>${round(v.mae, 2)}°</code>. `
+      + 'It grows every time you open this page, and never leaves your device.';
+  } else {
+    foot.innerHTML = `<b>Verification:</b> ${v?.n ?? 0} hour${v?.n === 1 ? '' : 's'} logged so far. `
+      + 'Each visit records how the forecast compared against the nearest station; after a few days this becomes a real record of how this app performs at this peak.';
+  }
+  const caveat = el('p', { class: 'ml-note', style: 'margin-top:8px' }, node);
+  caveat.innerHTML = 'A station is a different <i>place</i>, not just a different altitude — the comparison mixes '
+    + 'downscaling error with the honest fact that the weather 15 km away is not the weather here. Treat it as a '
+    + 'sanity check, not a verdict. Observations are never blended into the forecast.';
+}
+
 /* ---------- legends and small parts ---------- */
 export function renderLegend(node, metric, unit) {
   node.textContent = '';

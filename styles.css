@@ -427,3 +427,20 @@ td.cell-wrap { padding: 3px; min-width: 78px; }
 .compare-legend .swatches i { width: 26px; height: 8px; border-radius: 2px; display: block; }
 .progress { height: 2px; background: rgba(255,255,255,.08); border-radius: 2px; overflow: hidden; margin-top: 4px; }
 .progress i { display: block; height: 100%; background: var(--grad); transition: width .3s; }
+
+/* ---------- observations ---------- */
+.obs-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 16px; }
+.obs-delta { font-family: var(--mono); font-size: 2.6rem; font-weight: 500; line-height: 1; letter-spacing: -.04em; }
+.obs-headline { font-size: .88rem; color: #cfd8e3; flex: 1 1 300px; line-height: 1.55; }
+.obs-headline b { color: #fff; font-weight: 600; }
+.obs-empty { font-size: .84rem; color: var(--text-2); border: 1px solid var(--line-soft); border-radius: var(--radius-sm); padding: 14px 16px; background: rgba(255,255,255,.025); }
+.obs-list { display: grid; gap: 1px; }
+.obs-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+.obs-row:last-child { border-bottom: 0; }
+.obs-who .n { display: block; font-size: .84rem; font-weight: 550; }
+.obs-who .d { display: block; font-family: var(--mono); font-size: .63rem; color: var(--text-3); }
+.obs-vals { display: flex; gap: 18px; flex-wrap: wrap; }
+.obs-val { text-align: right; min-width: 46px; }
+.obs-val .num { font-size: .96rem; font-weight: 500; }
+.obs-val small { font-size: .62rem; color: var(--text-2); margin-left: 2px; }
+.obs-val i { display: block; font-style: normal; font-size: .55rem; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); margin-top: 1px; }

@@ -2,7 +2,7 @@
    on. Nothing here is a transcription of the code — if a constant changes, this
    page changes with it, which is the only way documentation stays true. */
 
-import { APP, PHYS, PRESSURE_LEVELS, MOUNTAINS, MODELS, SCORING, SOURCES, CONTACT } from './config.js';
+import { APP, PHYS, PRESSURE_LEVELS, MOUNTAINS, MODELS, SCORING, SOURCES, CONTACT, SMHI } from './config.js';
 import { TEMP_FEATURES } from './ml.js';
 import { snowRatio } from './physics.js';
 import { $, $$, el, round } from './util.js';
@@ -20,6 +20,9 @@ const CONSTANTS = {
   'PHYS.rainAbove': PHYS.rainAbove,
   'PHYS.driftThreshold': PHYS.driftThreshold,
   cacheMinutes: 30,
+  'SMHI.metresPerKm': SMHI.metresPerKm,
+  'SMHI.radiusKm': SMHI.radiusKm,
+  'SMHI.logLimit': SMHI.logLimit,
   levels: PRESSURE_LEVELS.join(', '),
   phaseMid: round((PHYS.snowBelow + PHYS.rainAbove) / 2, 2),
 };
@@ -80,6 +83,10 @@ table('#aggregator-table',
       'Training target for the bias correction',
       link(SOURCES.reanalysis.licenceUrl, SOURCES.reanalysis.licence),
       SOURCES.reanalysis.note],
+    [link(SOURCES.observations.url, SOURCES.observations.name),
+      'Live station readings, for the ground-truth panel',
+      link(SOURCES.observations.licenceUrl, SOURCES.observations.licence),
+      SOURCES.observations.note],
   ]);
 
 table('#fonts-table',
@@ -88,6 +95,7 @@ table('#fonts-table',
 
 /* The attribution block, assembled from the same data as the tables. */
 const attribution = SOURCES.providers.map((p) => `${p.credit}.`).join('<br>')
+  + `<br>${SOURCES.observations.credit}, licensed under Creative Commons Erkännande 4.0 SE.`
   + `<br>${SOURCES.reanalysis.credit}.`
   + `<br>${SOURCES.reanalysis.disclaimer}`
   + `<br><br>Weather data served by ${link(SOURCES.aggregator.url, 'Open-Meteo')}, licensed under `
@@ -96,7 +104,8 @@ const attribution = SOURCES.providers.map((p) => `${p.credit}.`).join('<br>')
 $('#attribution').innerHTML = attribution;
 $('#footer-attribution').innerHTML = `Weather data by ${link(SOURCES.aggregator.url, 'Open-Meteo')} `
   + `(${link(SOURCES.aggregator.licenceUrl, 'CC BY 4.0')}, modified) aggregating `
-  + `${SOURCES.providers.map((p) => p.org).join(', ')} and ${SOURCES.reanalysis.org}.`;
+  + `${SOURCES.providers.map((p) => p.org).join(', ')} and ${SOURCES.reanalysis.org}. `
+  + `Observation data from ${link(SOURCES.observations.licenceUrl, 'SMHI')}, CC BY 4.0 SE, modified.`;
 $('#verified-date').textContent = SOURCES.verified;
 $('#verified-pill').textContent = `Licences checked ${SOURCES.verified}`;
 
@@ -109,6 +118,7 @@ table('#requests-table',
     ['<code>ensemble-api.open-meteo.com<br>/v1/ensemble</code>', 'Ensemble members for spread and probability', 'Opening a mountain', '3 hours'],
     ['<code>historical-forecast-api.open-meteo.com<br>/v1/forecast</code>', `What every model predicted over the past ${APP.trainingDays} days`, 'First visit per mountain, then every ' + APP.retrainAfterHours + ' hours', '24 hours'],
     ['<code>archive-api.open-meteo.com<br>/v1/archive</code>', 'ERA5-Land reanalysis for the same hours — the training target', 'With the request above', '24 hours'],
+    [`<code>opendata-download-metobs<br>.smhi.se</code>`, `Latest hour of ${SMHI.parameters.length} observed parameters for every station in Sweden`, 'Once per parameter, shared by every mountain and both pages', '20 minutes'],
   ]);
 
 /* ---------- 6. snow ratio, read from the function itself ---------- */
