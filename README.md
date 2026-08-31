@@ -57,6 +57,35 @@ Every push to `main` republishes automatically.
 `.nojekyll` is present so Jekyll does not touch the files. There is no build step, no workflow and
 no dependency to install — which is the point.
 
+## Putting it on your own domain
+
+1. **Buy the domain** anywhere. Nothing about the site depends on the registrar.
+2. **Point DNS at GitHub Pages.** For an apex domain (`areweather.se`), four A records and four
+   AAAA records; for a subdomain (`www.areweather.se`), a single CNAME to `antonalin.github.io`.
+   The current addresses are in
+   [GitHub's docs](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site) —
+   check them there rather than trusting a copy in a README.
+   Delete any default A record the registrar created for you first.
+3. **Update the repository** so the absolute URLs it publishes match:
+
+   ```bash
+   node tools/set-domain.mjs areweather.se   # writes CNAME, sitemap.xml, robots.txt, README
+   git commit -am "Point the site at areweather.se" && git push
+   ```
+
+4. **Set the domain** in *Settings → Pages → Custom domain*, wait for the DNS check to pass, then
+   tick **Enforce HTTPS** (the certificate is issued automatically; it can take up to a day).
+
+**The one trap.** Setting the domain in Settings writes a `CNAME` file directly to the deploy
+branch. A later push from a branch without that file silently deletes it and the domain stops
+working, usually days later when nobody connects the two events. That is exactly why
+`set-domain.mjs` commits `CNAME` into the repository — keep it there.
+
+The site itself is path-agnostic: every link, script and font reference is relative, so it works
+at `example.com/` and at `user.github.io/repo/` without changes. The only exceptions are the
+absolute URLs the script rewrites, and `404.html`, which resolves its own base at runtime because
+a 404 is served from an arbitrary path where relative links cannot be trusted.
+
 ## Running it locally
 
 ```bash
