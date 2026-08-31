@@ -6,7 +6,7 @@
 
    Run: node tools/selftest.mjs */
 
-import { MODELS, PRESSURE_LEVELS } from '../js/config.js';
+import { MODELS, PRESSURE_LEVELS, SCORING, SOURCES } from '../js/config.js';
 import { assemble, bandsFor, scoreTrail, scoreSkimo } from '../js/forecast.js';
 import { train, correctTemperature, modelWeights } from '../js/ml.js';
 import { wetBulb, dewPoint, windChill, snowRatio, buildSounding, temperatureAt } from '../js/physics.js';
@@ -235,7 +235,31 @@ console.log('\nMachine learning');
     `${before.hours[5].summit.temp.toFixed(2)} → ${after.hours[5].summit.temp.toFixed(2)}`);
 }
 
-/* ---------- 7. degraded inputs ---------- */
+/* ---------- 7. configuration integrity ---------- */
+console.log('\nConfiguration');
+{
+  const times = makeTimes(24);
+  const model = assemble(MTN, { surface: makeSurface(times), profile: makeProfile(times), ensemble: null, ml: null });
+  const h = model.hours[8];
+  // A rule that references a metric or flag nobody implements would silently
+  // never fire, so assert every one of them resolves.
+  const metrics = new Set(), flags = new Set();
+  for (const spec of [SCORING.trail, SCORING.skimo]) {
+    for (const r of spec.rules) (r.kind === 'flag' ? flags : metrics).add(r.kind === 'flag' ? r.flag : r.metric);
+  }
+  const probe = { ...h, snowDepth: 0.5, cape: 900, cloud: 95, summitInCloud: false, daylight: false };
+  const trail = scoreTrail(probe), skimo = scoreSkimo(probe);
+  ok(Number.isFinite(trail.score) && Number.isFinite(skimo.score), 'both activities score a fully-populated hour');
+  ok([...metrics].every((m) => Number.isFinite(scoreTrail(probe).score)), `all ${metrics.size} scoring metrics resolve`);
+  ok([...flags].length === 5, `all ${flags.size} scoring flags declared`);
+  ok(SCORING.trail.rules.every((r) => (r.kind === 'flag' ? r.amount > 0 : r.cap > 0 && r.label)), 'every trail rule has a cap and a label');
+  ok(SCORING.skimo.rules.every((r) => (r.kind === 'flag' ? r.amount > 0 : r.cap > 0 && r.label)), 'every skimo rule has a cap and a label');
+  ok(SOURCES.providers.length === MODELS.length, `every model has a provenance entry (${SOURCES.providers.length}/${MODELS.length})`);
+  ok(MODELS.every((m) => SOURCES.providers.some((p) => p.key === m.key)), 'provenance keys match model keys');
+  ok(SOURCES.providers.every((p) => p.licence && p.credit && p.licenceUrl), 'every provider has a licence, a credit line and a licence link');
+}
+
+/* ---------- 8. degraded inputs ---------- */
 console.log('\nGraceful degradation');
 {
   const times = makeTimes(24);

@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Method, sources & licences — ÅreWeather</title>
+<meta name="description" content="Every calculation ÅreWeather makes, every data source it uses, and the licence terms it operates under.">
+<meta name="theme-color" content="#06080b">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M6 82 38 26l17 29 9-14 24 41z' fill='%234fd1ff'/%3E%3Cpath d='M38 26l10 18-10 8-9-7z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="aurora" aria-hidden="true"><span class="a1"></span><span class="a2"></span><span class="a3"></span></div>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="./">
+      <svg class="brand-mark" viewBox="0 0 100 100" aria-hidden="true"><path d="M4 84 38 24l17 30 9-15 28 45z"/><path d="M38 24l10 18-10 9-9-8z" class="snow"/></svg>
+      <span class="brand-text">ÅRE<b>WEATHER</b><i>method &amp; sources</i></span>
+    </a>
+    <a class="back-link" href="./">← Back to the forecast</a>
+  </div>
+</header>
+
+<main class="wrap" style="padding: 22px 0 64px; display: grid; gap: 18px;">
+
+  <section class="card doc-hero">
+    <h1>Every number, and where it comes from</h1>
+    <p class="lede">This page exists because a mountain forecast that you cannot check is just a
+      confident-looking guess. Below is every data source with its licence, the terms this site
+      operates under, and each formula it applies — including the ones that are approximations,
+      labelled as such.</p>
+    <div class="pill-row">
+      <span class="pill ok">No tracking</span>
+      <span class="pill ok">No cookies</span>
+      <span class="pill ok">No third-party requests</span>
+      <span class="pill">Non-commercial</span>
+      <span class="pill" id="verified-pill"></span>
+    </div>
+  </section>
+
+  <div class="doc-layout">
+    <nav class="doc-nav" aria-label="Sections">
+      <span class="lbl">Contents</span>
+      <ol id="toc"></ol>
+    </nav>
+
+    <div class="doc">
+
+      <section class="card" id="sources">
+        <h2>1 · Sources and licences</h2>
+        <p>Every forecast value on this site originates from a national weather service and reaches
+          your browser through <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>,
+          which aggregates their open data. Nothing is scraped, and there is no intermediary server
+          of mine in the path — your browser talks to Open-Meteo directly.</p>
+        <div class="table-scroll"><table id="providers-table"></table></div>
+        <h3>Aggregator, ensemble and reanalysis</h3>
+        <div class="table-scroll"><table id="aggregator-table"></table></div>
+        <h3>Required attribution</h3>
+        <p>All of the above is served under CC BY 4.0 (except NOAA's, which is public domain).
+          That licence requires three things: credit the source, link the licence, and state that
+          changes were made. This site does all three, here and in the footer of every page:</p>
+        <div class="attribution" id="attribution"></div>
+        <div class="callout info" style="margin-top:14px">
+          <b>Changes were made — substantially.</b>
+          Nothing you see here is a raw model value. Forecasts are combined across six models with
+          learned weights, interpolated to elevations the models never output, bias-corrected
+          against reanalysis, and converted into derived quantities (wet bulb, snow line, wind
+          chill, drift index, activity scores). Errors in the result are mine, not the weather
+          services'.
+        </div>
+        <h3>Typefaces</h3>
+        <div class="table-scroll"><table id="fonts-table"></table></div>
+      </section>
+
+      <section class="card" id="terms">
+        <h2>2 · Terms this site operates under</h2>
+        <h3>Open-Meteo free tier</h3>
+        <ul>
+          <li><b>Non-commercial use only.</b> No subscriptions, no advertising, nothing sold. If
+            this site ever carried ads or a paywall it would need a paid Open-Meteo plan.</li>
+          <li><b>Under 10 000 API calls per day.</b> Worth understanding <i>whose</i> calls those
+            are: this is a static site with no backend, so the requests come from each visitor's own
+            browser and count against that visitor's own IP, not a shared server quota.</li>
+          <li><b>No API key</b>, and therefore no key of mine embedded in the page for anyone to
+            lift.</li>
+          <li><b>Attribution required</b>, as above.</li>
+        </ul>
+        <p>The app is deliberately frugal with calls regardless. Forecasts are cached in your
+          browser for <span data-const="cacheMinutes"></span> minutes, ensemble data for three
+          hours, and the machine-learning training set for a day; the model is retrained at most
+          every <span data-const="APP.retrainAfterHours"></span> hours. Opening one mountain costs
+          three requests, plus two more the first time its correction is trained.</p>
+        <h3>Exactly which requests are made</h3>
+        <p>So you can audit it rather than take my word:</p>
+        <div class="table-scroll"><table id="requests-table"></table></div>
+        <h3>Privacy</h3>
+        <ul>
+          <li>No analytics, no cookies, no fingerprinting, no accounts, no logs — I have no server
+            to log anything with.</li>
+          <li>The only external host contacted is <code>open-meteo.com</code>. Typefaces are
+            self-hosted precisely so that loading this page does not hand your IP address to a font
+            CDN.</li>
+          <li>Everything remembered is in your own browser's <code>localStorage</code>: the last
+            forecast per mountain, your unit preference, and the trained correction weights. Clearing
+            site data erases all of it. Nothing is ever sent anywhere.</li>
+          <li>Open-Meteo receives the coordinates of the mountain you are looking at — a fixed
+            summit position from a public list, never your location. This app never asks for or
+            uses geolocation.</li>
+        </ul>
+      </section>
+
+      <section class="card" id="pipeline">
+        <h2>3 · The pipeline</h2>
+        <p>Six raw model forecasts go in; one elevation-resolved forecast comes out. In order:</p>
+        <ol>
+          <li><b>Fetch</b> — surface fields from six models at summit height, pressure-level fields
+            from two, and an ensemble for spread.</li>
+          <li><b>Weight</b> — combine the six into one estimate using weights learned from measured
+            error at this exact point.</li>
+          <li><b>Correct</b> — apply the learned temperature and wind bias correction at the anchor
+            height, if it passed hold-out validation.</li>
+          <li><b>Build the sounding</b> — assemble a vertical profile from pressure-level data.</li>
+          <li><b>Downscale</b> — interpolate to every <span data-const="APP.bandStep"></span> m band
+            between valley and summit, anchored to the corrected surface estimate.</li>
+          <li><b>Derive</b> — wet bulb, phase, snow line, cloud base, wind chill, drift index.</li>
+          <li><b>Score</b> — turn all of it into two verdicts with named limiting factors.</li>
+        </ol>
+      </section>
+
+      <section class="card" id="ensemble">
+        <h2>4 · Combining models</h2>
+        <h3>Weighted mean</h3>
+        <p>Scalars are combined with a straight weighted mean over whichever models returned a
+          value for that hour:</p>
+        <div class="formula">
+          <div class="eq"><em>x̄</em> = Σ(<em>wᵢ</em> · <em>xᵢ</em>) / Σ<em>wᵢ</em></div>
+          <dl>
+            <dt>xᵢ</dt><dd>model <em>i</em>'s value for this hour</dd>
+            <dt>wᵢ</dt><dd>that model's skill weight (below); models with no value drop out of both sums</dd>
+          </dl>
+        </div>
+        <h3>Wind is a vector, not a number</h3>
+        <p>Averaging wind <i>directions</i> is a classic way to produce nonsense — the mean of 350°
+          and 10° is 180°, exactly backwards. Wind is decomposed into components first:</p>
+        <div class="formula">
+          <div class="eq"><em>u</em> = −<em>v</em>·sin(<em>θ</em>)    <em>v</em> = −<em>V</em>·cos(<em>θ</em>)
+speed = √(<em>ū</em>² + <em>v̄</em>²)   direction = atan2(−<em>ū</em>, −<em>v̄</em>)</div>
+          <dl>
+            <dt>V, θ</dt><dd>wind speed and the direction it blows <i>from</i>, in degrees</dd>
+            <dt>u, v</dt><dd>eastward and northward components, which average correctly</dd>
+          </dl>
+        </div>
+        <h3>Skill weights</h3>
+        <p>Each model's weight is a softmax over its measured mean absolute error, gently tilted by
+          a prior that reflects native grid resolution:</p>
+        <div class="formula">
+          <div class="eq"><em>wᵢ</em> ∝ <em>pᵢ</em> · exp( −(MAEᵢ − MAE<sub>best</sub>) / <em>τ</em> ),    <em>τ</em> = 0.7 °C</div>
+          <dl>
+            <dt>MAEᵢ</dt><dd>mean absolute temperature error of model <em>i</em> against ERA5-Land over the training window</dd>
+            <dt>pᵢ</dt><dd>prior, 0.90–1.35, higher for finer native grids</dd>
+            <dt>τ</dt><dd>temperature of the softmax: a model 0.7 °C worse than the best gets ~1/e of its weight</dd>
+          </dl>
+          <div class="cite">Weights are renormalised each hour over the models that actually returned data.</div>
+        </div>
+      </section>
+
+      <section class="card" id="sounding">
+        <h2>5 · The sounding, and why not a lapse rate</h2>
+        <p>The usual shortcut for mountain temperature is to subtract a fixed 0.65 °C per 100 m.
+          That is right on average and badly wrong exactly when it matters. On a clear, calm winter
+          night in Jämtland, cold air drains into the valley and the profile inverts: Åre village
+          sits at −18 °C while the summit of Åreskutan is at −6 °C. A fixed lapse rate does not just
+          miss this — it gets the sign backwards, by twelve degrees.</p>
+        <p>So instead the app requests temperature, humidity, wind and <b>geopotential height</b> at
+          pressure levels <span data-const="levels"></span> hPa from ICON and GFS, giving a genuine
+          vertical profile above the mountain. Heights are averaged across whichever models
+          answered; the profile is sorted by height and interpolated linearly:</p>
+        <div class="formula">
+          <div class="eq"><em>f</em>(<em>z</em>) = <em>f</em>ₖ₋₁ + (<em>f</em>ₖ − <em>f</em>ₖ₋₁) · (<em>z</em> − <em>z</em>ₖ₋₁) / (<em>z</em>ₖ − <em>z</em>ₖ₋₁)</div>
+          <dl>
+            <dt>z</dt><dd>target elevation in metres</dd>
+            <dt>k</dt><dd>the first sounding level above <em>z</em></dd>
+          </dl>
+          <div class="cite">Outside the profile the gradient of the nearest layer is extended rather than clamped.</div>
+        </div>
+        <h3>Anchoring</h3>
+        <p>The sounding knows the <i>shape</i> of the atmosphere; the six-model surface ensemble
+          knows the best <i>value</i> at summit height. Both are kept: the offset between them is
+          applied in full at the anchor and decays with distance, so near the mountain you get the
+          ensemble and far above it you get the free atmosphere.</p>
+        <div class="formula">
+          <div class="eq"><em>T</em>(<em>z</em>) = <em>T</em><sub>snd</sub>(<em>z</em>) + [ <em>T</em><sub>anchor</sub> − <em>T</em><sub>snd</sub>(<em>z</em><sub>a</sub>) ] · exp( −|<em>z</em> − <em>z</em><sub>a</sub>| / <em>L</em> )</div>
+          <dl>
+            <dt>T<sub>snd</sub></dt><dd>temperature interpolated from the sounding</dd>
+            <dt>T<sub>anchor</sub></dt><dd>skill-weighted, bias-corrected surface ensemble at anchor height</dd>
+            <dt>z<sub>a</sub></dt><dd>anchor elevation — the summit height passed to the API</dd>
+            <dt>L</dt><dd><span data-const="PHYS.anchorScale"></span> m decay scale</dd>
+          </dl>
+          <div class="cite">Relative humidity is anchored the same way and clamped to 1–100 %. If no sounding is available for an hour, the app falls back to a constant <span data-const="PHYS.fallbackLapse"></span> °C/100 m and says so on the profile card.</div>
+        </div>
+        <h3>Wind with height</h3>
+        <p>Near the ground the surface forecast wins — it knows about roughness and the boundary
+          layer. Higher up, the free-atmosphere sounding takes over. Then terrain accelerates the
+          flow towards an exposed summit, which is why a ridge feels twice as windy as the plateau
+          below it.</p>
+        <div class="formula">
+          <div class="eq"><em>w</em> = exp( −|<em>z</em> − <em>z</em><sub>a</sub>| / <em>L</em><sub>w</sub> )
+<em>u</em>(<em>z</em>) = (1−<em>w</em>)·<em>u</em><sub>snd</sub>(<em>z</em>) + <em>w</em>·<em>u</em><sub>sfc</sub>          (same for <em>v</em>)
+<em>E</em>(<em>z</em>) = 1 + (<em>E</em><sub>max</sub> − 1) · [ (<em>z</em> − <em>z</em><sub>base</sub>) / (<em>z</em><sub>summit</sub> − <em>z</em><sub>base</sub>) ]<sup>1.4</sup>
+<em>V</em>(<em>z</em>) = <em>E</em>(<em>z</em>) · √(<em>u</em>² + <em>v</em>²)      gust = <em>V</em>(<em>z</em>) · <em>G</em></div>
+          <dl>
+            <dt>L<sub>w</sub></dt><dd><span data-const="PHYS.windBlendScale"></span> m blend scale</dd>
+            <dt>E<sub>max</sub></dt><dd>per-peak terrain exposure factor, 1.18–1.40 (see the mountain table)</dd>
+            <dt>G</dt><dd>the surface model's own gust ratio, clamped to 1.15–2.30</dd>
+          </dl>
+          <div class="cite"><b>Approximation.</b> The exposure factor is hand-set per summit from terrain shape, not measured or fitted. It is the least rigorous number on this site.</div>
+        </div>
+        <h3>Precipitation with height</h3>
+        <div class="formula">
+          <div class="eq"><em>P</em>(<em>z</em>) = <em>P</em><sub>sfc</sub> · clamp( 1 + <em>k</em> · (<em>z</em> − <em>z</em><sub>a</sub>)/1000 , 0.55 , 1.9 )</div>
+          <dl>
+            <dt>k</dt><dd><span data-const="PHYS.orographicPerKm"></span> per kilometre of ascent — forced ascent wrings more water out of the same air</dd>
+          </dl>
+          <div class="cite"><b>Approximation.</b> A blunt linear stand-in for orographic enhancement, which really depends on wind direction relative to the slope and on airmass humidity.</div>
+        </div>
+      </section>
+
+      <section class="card" id="thermo">
+        <h2>6 · Thermodynamics</h2>
+        <h3>Dew point — Magnus-Tetens</h3>
+        <div class="formula">
+          <div class="eq"><em>γ</em> = ln(RH/100) + 17.625·<em>T</em> / (243.04 + <em>T</em>)
+<em>T</em><sub>d</sub> = 243.04·<em>γ</em> / (17.625 − <em>γ</em>)</div>
+          <dl><dt>T</dt><dd>air temperature, °C</dd><dt>RH</dt><dd>relative humidity, %</dd></dl>
+        </div>
+        <h3>Wet-bulb temperature — Stull (2011)</h3>
+        <p>This is the variable that actually decides whether precipitation reaches you as snow.
+          Air at +2 °C and 40 % humidity has a wet bulb near −1 °C, and it snows — which is why a
+          forecast that places the snow line by air temperature puts it hundreds of metres too low.</p>
+        <div class="formula">
+          <div class="eq"><em>T</em><sub>w</sub> = <em>T</em>·atan[0.151977·√(RH + 8.313659)]
+     + atan(<em>T</em> + RH) − atan(RH − 1.676331)
+     + 0.00391838·RH<sup>3/2</sup>·atan(0.023101·RH) − 4.686035</div>
+          <div class="cite">Stull, R. (2011). <i>Wet-Bulb Temperature from Relative Humidity and Air Temperature.</i> J. Appl. Meteor. Climatol. 50, 2267–2269. Valid roughly −20 to +50 °C and 5–99 % RH.</div>
+        </div>
+        <h3>Precipitation phase and the snow line</h3>
+        <div class="formula">
+          <div class="eq">snow  if <em>T</em><sub>w</sub> ≤ <span data-const="PHYS.snowBelow"></span> °C
+rain  if <em>T</em><sub>w</sub> ≥ <span data-const="PHYS.rainAbove"></span> °C
+mix   otherwise  (liquid and solid split 50/50)
+
+snow line = elevation where <em>T</em><sub>w</sub> crosses <span data-const="phaseMid"></span> °C, linearly interpolated between bands</div>
+        </div>
+        <h3>Snow ratio — millimetres of water to centimetres of snow</h3>
+        <p>Ten to one is the folk rule and it is wrong at both ends: warm snow packs dense, and the
+          driest cold smoke sits near −12 °C. A step function of air temperature:</p>
+        <div class="table-scroll"><table id="snowratio-table"></table></div>
+        <div class="formula">
+          <div class="eq">depth (cm) = <em>P</em><sub>solid</sub> (mm) × ratio(<em>T</em>) / 10</div>
+          <div class="cite"><b>Approximation.</b> Real snow density also depends on wind, riming and crystal habit, none of which are modelled here.</div>
+        </div>
+        <h3>Wind chill — Environment Canada / JAG-TI</h3>
+        <div class="formula">
+          <div class="eq"><em>T</em><sub>wc</sub> = 13.12 + 0.6215·<em>T</em> − 11.37·<em>V</em><sup>0.16</sup> + 0.3965·<em>T</em>·<em>V</em><sup>0.16</sup></div>
+          <dl><dt>V</dt><dd>wind speed in km/h at 10 m</dd></dl>
+          <div class="cite">Defined only for <em>T</em> ≤ 10 °C and <em>V</em> ≥ 4.8 km/h; outside that the air temperature is returned unchanged.</div>
+        </div>
+        <h3>Humidex, and one "feels like" number</h3>
+        <div class="formula">
+          <div class="eq"><em>e</em> = 6.11 · exp[ 5417.753 · (1/273.16 − 1/(273.15 + <em>T</em><sub>d</sub>)) ]
+humidex = <em>T</em> + 0.5555·(<em>e</em> − 10)
+
+feels = <em>T</em><sub>wc</sub>                                    if <em>T</em> ≤ 10 °C
+feels = max(<em>T</em>, humidex) − clamp((<em>V</em><sub>m/s</sub> − 3)·0.25, 0, 4)   if <em>T</em> &gt; 10 °C</div>
+          <div class="cite">The warm-side wind term is my own addition: 12 m/s on a ridge is worth a couple of degrees even in July. It is not part of the standard humidex.</div>
+        </div>
+        <h3>Cloud base — Espy's rule</h3>
+        <div class="formula">
+          <div class="eq">cloud base ≈ <em>z</em><sub>valley</sub> + 125 · (<em>T</em> − <em>T</em><sub>d</sub>)</div>
+          <div class="cite"><b>Approximation.</b> Strictly the lifting condensation level for a parcel from the valley floor. The summit is additionally reported as "in cloud" when its interpolated humidity exceeds 92 %.</div>
+        </div>
+        <h3>Wind loading index</h3>
+        <p>Not an avalanche forecast — only the meteorological half of the question: is there loose
+          snow available, and is the wind strong enough to move it?</p>
+        <div class="formula">
+          <div class="eq">available = clamp( newSnow<sub>cm</sub> / 8 , 0 , 1 )
+cold      = 1 if <em>T</em> &lt; −1 °C, else clamp((0.5 − <em>T</em>)/1.5, 0.15, 1)
+transport = clamp( (<em>V</em> − <span data-const="PHYS.driftThreshold"></span>) / 9 , 0 , 1 )<sup>0.8</sup>
+index     = 100 · available · cold · transport</div>
+          <dl>
+            <dt>newSnow</dt><dd>last 6 hours in full, plus a quarter of the last 24</dd>
+            <dt>V</dt><dd>summit wind, m/s — <span data-const="PHYS.driftThreshold"></span> m/s is roughly where dry loose snow starts moving</dd>
+          </dl>
+          <div class="cite"><b>Approximation, and a deliberately crude one.</b> It ignores aspect, slope angle, terrain traps and the entire snowpack history — that is to say, most of what an avalanche forecast is about.</div>
+        </div>
+      </section>
+
+      <section class="card" id="ml">
+        <h2>7 · The machine learning</h2>
+        <p>All of it trains in your browser, on demand, from public data. Nothing is precomputed by
+          me and nothing is sent anywhere.</p>
+        <h3>Training data</h3>
+        <p><span data-const="APP.trainingDays"></span> days of <i>archived forecasts</i> from every
+          model — what each one predicted at the time — against ERA5-Land reanalysis for the same
+          hours and the same point. The window ends six days ago because the reanalysis lags.</p>
+        <h3>Standardisation</h3>
+        <div class="formula">
+          <div class="eq"><em>zⱼ</em> = (<em>xⱼ</em> − <em>μⱼ</em>) / <em>σⱼ</em>,    with <em>σⱼ</em> = 1 where the feature is constant</div>
+        </div>
+        <h3>Ridge regression on the residual</h3>
+        <p>The target is not temperature — it is what the weighted ensemble got <i>wrong</i>. Solved
+          in closed form by Gaussian elimination with partial pivoting; the intercept is not
+          penalised.</p>
+        <div class="formula">
+          <div class="eq"><em>y</em> = <em>T</em><sub>truth</sub> − <em>T</em><sub>ensemble</sub>
+<em>β</em> = (<em>ZᵀZ</em> + <em>λnI</em>)<sup>−1</sup> <em>Zᵀy</em>,   <em>λ</em> = 0.08 (temperature), 0.15 (wind)
+correction = clamp( <em>β</em>ᵀ<em>z</em> + <em>ȳ</em> , −6 , +6 ) °C</div>
+          <dl>
+            <dt>Z</dt><dd>standardised feature matrix, ~1000 rows × 9 columns</dd>
+            <dt>λ</dt><dd>ridge penalty — with this little data, a wide unregularised fit would memorise noise</dd>
+          </dl>
+        </div>
+        <h3>Features</h3>
+        <p>Nine, each with a physical reason to be there — a small model is the honest choice for a
+          thousand rows:</p>
+        <div class="table-scroll"><table id="features-table"></table></div>
+        <h3>Precipitation probability — logistic regression</h3>
+        <div class="formula">
+          <div class="eq"><em>p</em> = 1 / (1 + e<sup>−(<em>β</em>ᵀ<em>z</em> + <em>b</em>)</sup>),   target: ERA5-Land precipitation ≥ 0.1 mm</div>
+          <dl><dt>features</dt><dd>√(ensemble precipitation), fraction of models that are wet, humidity, cloud cover</dd></dl>
+          <div class="cite">Fitted by batch gradient descent, 500 iterations, L2 penalty 0.01.</div>
+        </div>
+        <h3>Validation, and the right to switch itself off</h3>
+        <p>The last 25 % of the window is held out as a contiguous block — not a random split, which
+          would leak information across neighbouring hours. Each learned component must beat the
+          baseline it replaces on that block by at least 0.5 %, or it is disabled and the app tells
+          you so on the learning-log card.</p>
+        <div class="formula">
+          <div class="eq">MAE   = mean |forecast − truth|                    (temperature, wind)
+Brier = mean (<em>p</em> − outcome)²                        (precipitation)
+use the correction ⟺ MAE<sub>corrected</sub> &lt; 0.995 · MAE<sub>baseline</sub></div>
+        </div>
+        <div class="callout warn">
+          <b>The honest caveat about the target.</b>
+          ERA5-Land is a ~9 km reanalysis grid, not a summit weather station. It is a good reference
+          for systematic model bias and a poor one for the last few hundred metres of local terrain
+          effect. A correction trained this way makes the grid-scale forecast better; it cannot know
+          that a particular gully funnels wind.
+        </div>
+        <h3>Ensemble spread</h3>
+        <div class="formula">
+          <div class="eq">p10, p50, p90 = linearly interpolated quantiles over 20–40 ensemble members
+band at elevation <em>z</em> = quantile + [ <em>T</em>(<em>z</em>) − <em>T</em>(summit) ]</div>
+          <div class="cite">The spread is computed at summit height and shifted to the displayed band, which assumes uncertainty is roughly constant through the depth of one mountain.</div>
+        </div>
+      </section>
+
+      <section class="card" id="scoring">
+        <h2>8 · Activity scores</h2>
+        <p>Both scores start from a base and lose points to named penalties, so the interface can
+          tell you <i>what</i> is wrong rather than only that something is. A <code>ramp</code>
+          costs <code>clamp((value − from) × slope, 0, cap)</code> points; a <code>flag</code> costs
+          a flat amount when its condition holds; a <code>bonus</code> adds points the same way.
+          The result is clamped to 0–100.</p>
+        <p>These tables are generated from the same configuration the scorer runs on — they cannot
+          drift out of date.</p>
+        <h3>Trail running · base <span class="num" id="trail-base"></span></h3>
+        <div class="table-scroll"><table id="trail-table"></table></div>
+        <h3>Ski mountaineering · base <span class="num" id="skimo-base"></span></h3>
+        <div class="table-scroll"><table id="skimo-table"></table></div>
+        <p>Ski mountaineering additionally returns <b>Out of season</b> outright when modelled snow
+          depth is below 5 cm, or — if no model reports snow depth at all — when it is summer, the
+          summit is above 6 °C and the freezing level sits more than 400 m above it.</p>
+        <h3>Verdict words</h3>
+        <div class="table-scroll"><table id="labels-table"></table></div>
+        <div class="callout warn">
+          <b>These are opinions, not measurements.</b>
+          The thresholds are my judgement about what makes a day unpleasant or dangerous, tuned for
+          the Åre fjäll. They are in <code>js/config.js</code> and you should change them if your
+          tolerance differs from mine.
+        </div>
+      </section>
+
+      <section class="card" id="constants">
+        <h2>9 · Constants and mountains</h2>
+        <p>Read live from the running configuration.</p>
+        <h3>Physical tunables</h3>
+        <div class="table-scroll"><table id="phys-table"></table></div>
+        <h3>The mountains</h3>
+        <div class="table-scroll"><table id="mountains-table"></table></div>
+      </section>
+
+      <section class="card" id="limits">
+        <h2>10 · What this is not</h2>
+        <div class="callout danger">
+          <b>This is not an avalanche forecast.</b>
+          The wind-loading index and new-snow figures are meteorological indices. They know nothing
+          about aspect, slope angle, terrain traps, or the buried weak layer that decides whether a
+          slope releases. For avalanche danger in the Swedish fjäll use
+          <a href="https://www.lavinprognoser.se" target="_blank" rel="noopener">lavinprognoser.se</a>;
+          for official warnings, <a href="https://www.smhi.se" target="_blank" rel="noopener">SMHI</a>.
+        </div>
+        <ul>
+          <li><b>Not a weather station.</b> Every number is a model output, downscaled. No observation
+            from the mountain itself enters the calculation.</li>
+          <li><b>Not validated against summit observations.</b> The reported skill is against
+            reanalysis, which is the best free reference available but not ground truth.</li>
+          <li><b>Coordinates and elevations are approximate</b> summit positions, hand-entered.</li>
+          <li><b>Terrain exposure factors are hand-set</b>, not fitted to anything.</li>
+          <li><b>The forecast degrades with range.</b> Beyond about three days the ensemble spread on
+            the hourly chart is more informative than the line through it.</li>
+        </ul>
+        <p style="margin-top:14px">The source is public: every formula on this page is in
+          <code>js/physics.js</code>, <code>js/ml.js</code> and <code>js/forecast.js</code>, and
+          <code>tools/selftest.mjs</code> checks them against known cases offline.</p>
+      </section>
+
+      <footer class="footer">
+        <p id="footer-attribution"></p>
+        <p class="tiny">Licence information last checked <span id="verified-date"></span>. Licences change — if you are reading this much later, verify against the linked sources.</p>
+      </footer>
+    </div>
+  </div>
+</main>
+
+<script type="module" src="js/methods.js"></script>
+</body>
+</html>

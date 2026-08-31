@@ -102,6 +102,52 @@ sw.js               offline app shell
 tools/selftest.mjs  offline physics + ML test harness
 ```
 
+## Sources, licences and terms
+
+There is a full [method and sources page](methods.html) in the app itself, generated from the same
+configuration the forecast runs on, covering every formula and every licence. The short version:
+
+| Source | Used for | Licence | Credit |
+| --- | --- | --- | --- |
+| [Open-Meteo](https://open-meteo.com) | Serves every model below | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | Free tier: **non-commercial only**, under 10 000 calls/day, no API key |
+| [MET Norway](https://api.met.no/doc/License) | MET Nordic 1 km | NLOD 2.0 / CC BY 4.0 | Data from MET Norway |
+| [DMI](https://opendatadocs.dmi.govcloud.dk/) | Harmonie AROME 2 km | CC BY 4.0 | Danish Meteorological Institute |
+| [DWD](https://www.dwd.de/EN/service/copyright/copyright_node.html) | ICON | CC BY 4.0 | Deutscher Wetterdienst |
+| [ECMWF](https://www.ecmwf.int/en/forecasts/datasets/open-data) | IFS 0.25° | CC BY 4.0 | Based on data and products of ECMWF |
+| [UK Met Office](https://registry.opendata.aws/met-office-global-deterministic/) | UM global 10 km | CC BY-**SA** upstream — see note | Contains public sector information licensed by the UK Met Office |
+| [NOAA/NCEP](https://www.weather.gov/disclaimer) | GFS | Public domain | Credit as a courtesy |
+| [Copernicus C3S](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land) | ERA5-Land, the ML training target | CC BY (since 2 Jul 2025) | Generated using Copernicus Climate Change Service information |
+
+CC BY 4.0 requires three things and the site does all three, in the footer of both pages: credit the
+source, link the licence, and **state that changes were made** — which they emphatically are, since
+nothing displayed is a raw model value.
+
+**Two things to keep an eye on if you fork or extend this:**
+
+1. **Commercial use.** Adding advertising, a subscription, or bundling this into a paid product moves
+   you off the Open-Meteo free tier and you would need a paid plan. As published it is non-commercial:
+   no ads, no accounts, nothing sold.
+2. **The UK Met Office share-alike question.** Open-Meteo serves its API output under CC BY 4.0, but
+   the upstream UKMO global data is published under CC BY-**SA**, which asks that adapted material be
+   released under the same terms. Since this app adapts heavily, you either accept that and license
+   the displayed forecast CC BY-SA, or drop that model — one line, removing `ukmo_seamless` from
+   `MODELS` in `js/config.js`. It is the lowest-weighted of the six over Jämtland, so it costs almost
+   nothing. It is currently **left in**, and flagged in the app rather than hidden.
+
+Licences were last verified on the date in `SOURCES.verified` in `js/config.js`. They change; re-check
+if that date is old.
+
+## Privacy
+
+- No analytics, cookies, accounts or logs — there is no server to log with.
+- The only external host contacted is `open-meteo.com`. Typefaces (Inter and JetBrains Mono, both
+  [OFL 1.1](fonts/)) are self-hosted specifically so that loading the page does not send visitors'
+  IP addresses to a font CDN — relevant under GDPR for an EU-facing site.
+- `localStorage` holds the last forecast per mountain, the unit preference, and the trained weights.
+  Nothing leaves the browser.
+- Geolocation is never requested. Open-Meteo only ever sees fixed summit coordinates from a public
+  list.
+
 ## Honest limitations
 
 - ERA5-Land reanalysis is a ~9 km grid estimate, not a summit weather station. The learned

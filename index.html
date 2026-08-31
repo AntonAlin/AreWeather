@@ -11,9 +11,7 @@
 <meta property="og:type" content="website">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M6 82 38 26l17 29 9-14 24 41z' fill='%234fd1ff'/%3E%3Cpath d='M38 26l10 18-10 8-9-7z' fill='%23fff'/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -27,6 +25,7 @@
       <span class="brand-text">ÅRE<b>WEATHER</b><i>fjäll forecast engine</i></span>
     </a>
     <div class="topbar-actions">
+      <a class="nav-link" href="methods.html">Method &amp; sources</a>
       <div class="seg" id="unit-toggle" role="group" aria-label="Wind unit">
         <button type="button" data-unit="ms" class="on">m/s</button>
         <button type="button" data-unit="kmh">km/h</button>
@@ -110,7 +109,10 @@
   </div>
 
   <section class="card method" id="method">
-    <div class="card-head"><div><h2>How this forecast is made</h2><p class="sub">No black boxes — here is the whole pipeline.</p></div></div>
+    <div class="card-head">
+      <div><h2>How this forecast is made</h2><p class="sub">No black boxes — the summary is here, every formula and licence is on the method page.</p></div>
+      <div class="controls"><a class="nav-link" href="methods.html">Full method, sources &amp; licences →</a></div>
+    </div>
     <ol class="method-list">
       <li><b>Six numerical weather models</b> are fetched per mountain from Open-Meteo: MET Norway MET Nordic (1&nbsp;km, the best model for Scandinavian terrain), DMI Harmonie AROME (2&nbsp;km), DWD ICON, ECMWF IFS, UKMO and NOAA GFS.</li>
       <li><b>A real sounding, not a lapse-rate guess.</b> Temperature, humidity and wind on pressure levels from 1000&nbsp;hPa to 500&nbsp;hPa with their geopotential heights give the true vertical structure above the mountain — including inversions, where the summit is <i>warmer</i> than the village.</li>
@@ -123,7 +125,14 @@
   </section>
 
   <footer class="footer">
-    <p>Data: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (CC&nbsp;BY&nbsp;4.0) aggregating MET&nbsp;Norway, DMI, DWD, ECMWF, UKMO, NOAA and ERA5-Land. Everything — fetching, downscaling and model training — runs in your browser. No API key, no server, no tracking.</p>
+    <p>Weather data served by <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>
+      under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC&nbsp;BY&nbsp;4.0</a>,
+      <b>modified</b> — values shown are downscaled, combined and bias-corrected by this site.
+      Source data from MET&nbsp;Norway, DMI, Deutscher&nbsp;Wetterdienst, ECMWF, the UK&nbsp;Met&nbsp;Office and NOAA;
+      reanalysis generated using Copernicus Climate Change Service information.
+      <a href="methods.html">Full sources, licences and every calculation →</a></p>
+    <p>Non-commercial use of the Open-Meteo free tier. Everything — fetching, downscaling and model
+      training — runs in your browser. No API key, no server, no cookies, no tracking, no third-party requests.</p>
     <p class="tiny">Built for the Åre fjäll · elevations and coordinates are approximate summit positions · <span id="build-line"></span></p>
   </footer>
 </main>

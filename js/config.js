@@ -126,3 +126,122 @@ export const PHYS = {
   /** wind speed (m/s) at which loose snow starts moving */
   driftThreshold: 7,
 };
+
+/* ---------------------------------------------------------------------------
+   Activity scoring, as data rather than buried in code — so the method page
+   can print exactly the rules that ran, and they can never drift apart.
+
+   A `ramp` rule costs  clamp((value − from) × slope, 0, cap)  points.
+   A `bonus` rule adds   clamp((value − from) × slope, 0, cap)  points.
+   A `flag` rule costs a flat `amount` when its condition is true.
+   Everything is clamped to 0–100 at the end.
+--------------------------------------------------------------------------- */
+export const SCORING = {
+  trail: {
+    base: 100,
+    rules: [
+      { kind: 'ramp', metric: 'precip', from: 0, slope: 16, cap: 42, label: 'precipitation', why: 'Wet rock and wet feet, and it only gets colder with height.' },
+      { kind: 'ramp', metric: 'wind', from: 6, slope: 3.4, cap: 34, label: 'wind', why: 'Above about 6 m/s a headwind starts costing real pace on an exposed ridge.' },
+      { kind: 'ramp', metric: 'gust', from: 15, slope: 1.7, cap: 15, label: 'gusts', why: 'Gusts are what actually knock you off a line, not the mean wind.' },
+      { kind: 'ramp', metric: 'chill', from: 0, slope: 2.3, cap: 30, label: 'wind chill', reads: 'feels-like below 0 °C', why: 'Below freezing on skin, a running kit stops being enough.' },
+      { kind: 'ramp', metric: 'feels', from: 20, slope: 2.6, cap: 24, label: 'heat', why: 'Rare in the fjäll, punishing when it happens.' },
+      { kind: 'ramp', metric: 'snowDepth', from: 0.25, slope: 60, cap: 26, label: 'deep snow underfoot', why: 'Modelled snow cover deep enough to wreck footing.' },
+      { kind: 'flag', flag: 'summitInCloud', amount: 9, label: 'summit in cloud', why: 'No view, and navigation by feel.' },
+      { kind: 'flag', flag: 'night', amount: 13, label: 'darkness', why: 'Headlamp territory — outside sunrise/sunset for that day.' },
+      { kind: 'flag', flag: 'sleet', amount: 7, label: 'sleet', why: 'The single worst thing to be wet in.' },
+      { kind: 'flag', flag: 'thunder', amount: 10, label: 'thunder risk', why: 'CAPE above 700 J/kg — get off the high ground.' },
+    ],
+  },
+  skimo: {
+    base: 74,
+    rules: [
+      { kind: 'ramp', metric: 'coverDeficit', from: 0, slope: 90, cap: 28, label: 'thin cover', reads: 'snow depth below 0.30 m', why: 'Below 30 cm the rocks are still in play.' },
+      { kind: 'bonus', metric: 'coverSurplus', from: 0, slope: 22, cap: 14, label: 'good base', reads: 'snow depth above 0.30 m', why: 'A deep base covers the sharks.' },
+      { kind: 'bonus', metric: 'newSnow24', from: 0, slope: 1.6, cap: 18, label: 'fresh snow', why: 'The entire point of the exercise.' },
+      { kind: 'ramp', metric: 'wind', from: 8, slope: 3.1, cap: 36, label: 'wind', why: 'Skinning into 15 m/s on a plateau is its own kind of misery.' },
+      { kind: 'ramp', metric: 'gust', from: 18, slope: 1.5, cap: 14, label: 'gusts', why: 'Gusts on a corniced ridge are a safety problem, not a comfort one.' },
+      { kind: 'ramp', metric: 'rain', from: 0, slope: 18, cap: 38, label: 'rain on snow', why: 'Ruins the surface and soaks the pack.' },
+      { kind: 'ramp', metric: 'chill', from: 20, slope: 1.6, cap: 18, label: 'severe cold', reads: 'feels-like below −20 °C', why: 'Below −20 °C felt, exposed skin has minutes.' },
+      { kind: 'ramp', metric: 'temp', from: 3, slope: 5, cap: 16, label: 'warm, wet snow', why: 'Isothermal mush, and a wet-loose problem in steep terrain.' },
+      { kind: 'ramp', metric: 'drift', from: 45, slope: 0.35, cap: 18, label: 'wind slab building', why: 'Meteorological wind loading — see the avalanche warning below.' },
+      { kind: 'flag', flag: 'summitInCloud', amount: 15, label: 'flat light, no visibility', why: 'You cannot read terrain you cannot see.' },
+      { kind: 'flag', flag: 'overcastOnly', amount: 7, label: 'flat light', why: 'Cloud above the summit still kills the contrast.' },
+      { kind: 'flag', flag: 'night', amount: 12, label: 'darkness', why: 'Outside sunrise/sunset for that day.' },
+    ],
+  },
+  /** Bands used for the verdict word attached to a score. */
+  labels: [[80, 'Excellent'], [65, 'Good'], [50, 'Workable'], [32, 'Marginal'], [0, 'Poor']],
+};
+
+/* ---------------------------------------------------------------------------
+   Provenance. Every upstream source, its licence, and the credit it asks for.
+   `verified` is the date these were last read from the provider's own page —
+   licences change, so treat anything older than a few months as needing a look.
+--------------------------------------------------------------------------- */
+export const SOURCES = {
+  verified: '2026-08-31',
+  aggregator: {
+    name: 'Open-Meteo',
+    url: 'https://open-meteo.com',
+    terms: 'https://open-meteo.com/en/terms',
+    licence: 'CC BY 4.0',
+    licenceUrl: 'https://creativecommons.org/licenses/by/4.0/',
+    tier: 'Free tier — no API key, non-commercial use only, under 10 000 API calls per day.',
+  },
+  providers: [
+    {
+      key: 'metno_seamless', org: 'MET Norway', product: 'MET Nordic (1 km)',
+      country: 'Norway', licence: 'NLOD 2.0 and CC BY 4.0',
+      credit: 'Data from MET Norway',
+      url: 'https://api.met.no/', licenceUrl: 'https://api.met.no/doc/License',
+    },
+    {
+      key: 'dmi_seamless', org: 'DMI', product: 'Harmonie AROME (2 km)',
+      country: 'Denmark', licence: 'CC BY 4.0',
+      credit: 'Atmospheric forecasts from the Danish Meteorological Institute',
+      url: 'https://opendatadocs.dmi.govcloud.dk/', licenceUrl: 'https://opendatadocs.dmi.govcloud.dk/en/Terms_of_Use',
+    },
+    {
+      key: 'icon_seamless', org: 'Deutscher Wetterdienst', product: 'ICON / ICON-EU / ICON-D2',
+      country: 'Germany', licence: 'CC BY 4.0',
+      credit: 'Deutscher Wetterdienst',
+      url: 'https://opendata.dwd.de/', licenceUrl: 'https://www.dwd.de/EN/service/copyright/copyright_node.html',
+    },
+    {
+      key: 'ecmwf_ifs025', org: 'ECMWF', product: 'IFS 0.25° open data',
+      country: 'Europe', licence: 'CC BY 4.0',
+      credit: 'Based on data and products of the European Centre for Medium-Range Weather Forecasts (ECMWF)',
+      url: 'https://www.ecmwf.int/en/forecasts/datasets/open-data', licenceUrl: 'https://creativecommons.org/licenses/by/4.0/',
+    },
+    {
+      key: 'ukmo_seamless', org: 'UK Met Office', product: 'Unified Model global (10 km)',
+      country: 'United Kingdom', licence: 'CC BY-SA 4.0 upstream — see the note below',
+      credit: 'Contains public sector information licensed by the UK Met Office',
+      url: 'https://registry.opendata.aws/met-office-global-deterministic/', licenceUrl: 'https://registry.opendata.aws/met-office-global-deterministic/',
+      caveat: true,
+    },
+    {
+      key: 'gfs_seamless', org: 'NOAA / NCEP', product: 'GFS and HRRR',
+      country: 'United States', licence: 'Public domain (US Government work)',
+      credit: 'NOAA National Centers for Environmental Prediction (credit given as a courtesy; not required)',
+      url: 'https://www.nco.ncep.noaa.gov/pmb/products/gfs/', licenceUrl: 'https://www.weather.gov/disclaimer',
+    },
+  ],
+  ensemble: {
+    name: 'ICON-EU EPS / GFS ensemble', org: 'DWD and NOAA',
+    note: 'Used only for the p10–p90 spread and the probability of precipitation.',
+  },
+  reanalysis: {
+    name: 'ERA5-Land', org: 'Copernicus Climate Change Service (C3S) / ECMWF',
+    licence: 'Creative Commons Attribution (CC BY) since 2 July 2025',
+    credit: 'Generated using Copernicus Climate Change Service information 2026',
+    disclaimer: 'Neither the European Commission nor ECMWF is responsible for any use of the Copernicus information or data it contains.',
+    url: 'https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land',
+    licenceUrl: 'https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land?tab=overview',
+    note: 'Used as the training target for the bias correction, never shown as a forecast.',
+  },
+  fonts: [
+    { name: 'Inter', author: 'The Inter Project Authors', licence: 'SIL Open Font License 1.1', url: 'https://rsms.me/inter/', file: 'fonts/LICENSE-Inter.txt' },
+    { name: 'JetBrains Mono', author: 'JetBrains', licence: 'SIL Open Font License 1.1', url: 'https://www.jetbrains.com/lp/mono/', file: 'fonts/LICENSE-JetBrainsMono.txt' },
+  ],
+};

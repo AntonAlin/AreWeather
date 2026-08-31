@@ -1,7 +1,7 @@
 /* Assembly: turn four raw API payloads plus the learned parameters into one
    view model that the UI can render without doing any meteorology of its own. */
 
-import { APP } from './config.js';
+import { APP, SCORING } from './config.js';
 import { series, members } from './api.js';
 import {
   buildSounding, temperatureAt, humidityAt, windAt, precipAt,
@@ -310,79 +310,92 @@ function isDaylight(t, daily) {
 }
 
 /* ---------- activity scoring ----------
-   Deliberately transparent: every penalty is named so the UI can tell you what
-   is wrong, not just that something is. */
+   The rules themselves live in SCORING in config.js so that the method page
+   can print exactly what ran. This is only the machinery that applies them. */
 
 const NO_DATA = { score: 0, label: 'No data', why: ['forecast data missing for this hour'] };
-const label = (s) => (s >= 80 ? 'Excellent' : s >= 65 ? 'Good' : s >= 50 ? 'Workable' : s >= 32 ? 'Marginal' : 'Poor');
+const OUT_OF_SEASON = { score: 3, label: 'Out of season', why: ['no snow cover'] };
+
+/** Values a scoring rule can ramp against. */
+const METRICS = {
+  precip: (h, b) => b.precip,
+  rain: (h, b) => b.rain,
+  wind: (h, b) => b.wind,
+  gust: (h, b) => b.gust,
+  temp: (h, b) => b.temp,
+  feels: (h, b) => b.feels,
+  /** how far below freezing it feels — ramps the other way from `feels` */
+  chill: (h, b) => -b.feels,
+  snowDepth: (h) => h.snowDepth,
+  coverDeficit: (h) => (Number.isFinite(h.snowDepth) ? 0.3 - h.snowDepth : NaN),
+  coverSurplus: (h) => (Number.isFinite(h.snowDepth) ? h.snowDepth - 0.3 : NaN),
+  newSnow24: (h) => h.newSnow24,
+  drift: (h) => h.drift,
+};
+
+/** Conditions a flat-penalty rule can fire on. */
+const FLAGS = {
+  summitInCloud: (h) => !!h.summitInCloud,
+  overcastOnly: (h) => !h.summitInCloud && (h.cloud ?? 0) > 85,
+  night: (h) => !h.daylight,
+  sleet: (h, b) => b.phase === 'mix',
+  thunder: (h) => Number.isFinite(h.cape) && h.cape > 700,
+};
+
+const labelFor = (s) => (SCORING.labels.find(([min]) => s >= min) ?? [0, 'Poor'])[1];
+
+function applyRules(spec, h, b) {
+  let score = spec.base;
+  const hits = [];
+  for (const r of spec.rules) {
+    let delta = 0;
+    if (r.kind === 'flag') {
+      delta = FLAGS[r.flag]?.(h, b) ? -r.amount : 0;
+    } else {
+      const v = METRICS[r.metric]?.(h, b);
+      if (!Number.isFinite(v)) continue;
+      const magnitude = clamp((v - r.from) * r.slope, 0, r.cap);
+      delta = r.kind === 'bonus' ? magnitude : -magnitude;
+    }
+    if (!Number.isFinite(delta) || delta === 0) continue;
+    score += delta;
+    // Only penalties worth mentioning become the "limited by" list.
+    if (delta < -3) hits.push([-delta, r.label]);
+  }
+  hits.sort((a, b2) => b2[0] - a[0]);
+  return { score, hits };
+}
+
+const finish = (score, hits) => {
+  const v = clamp(Math.round(score), 0, 100);
+  return { score: v, label: labelFor(v), why: hits.slice(0, 3).map((x) => x[1]) };
+};
 
 export function scoreTrail(h) {
   const b = h.summit;
-  let s = 100;
-  const why = [];
-  const hit = (amount, text) => {
-    if (!Number.isFinite(amount) || amount <= 0) return;
-    s -= amount;
-    if (amount > 3) why.push([amount, text]);
-  };
-
-  hit(clamp(b.precip * 16, 0, 42), b.phase === 'snow' ? 'snow falling' : 'rain');
-  hit(clamp((b.wind - 6) * 3.4, 0, 34), 'wind');
-  hit(clamp((b.gust - 15) * 1.7, 0, 15), 'gusts');
-  if (Number.isFinite(b.feels)) {
-    if (b.feels < 0) hit(clamp(-b.feels * 2.3, 0, 30), 'wind chill');
-    if (b.feels > 20) hit(clamp((b.feels - 20) * 2.6, 0, 24), 'heat');
-  }
-  if (h.summitInCloud) hit(9, 'summit in cloud');
-  if (!h.daylight) hit(13, 'darkness');
-  if (b.phase === 'mix') hit(7, 'sleet');
-  if (h.cape > 700) hit(10, 'thunder risk');
-  if (Number.isFinite(h.snowDepth) && h.snowDepth > 0.25) hit(clamp(h.snowDepth * 30, 0, 26), 'deep snow underfoot');
-
   if (!Number.isFinite(b.temp) || !Number.isFinite(b.wind)) return NO_DATA;
-  s = clamp(Math.round(s), 0, 100);
-  why.sort((a, b2) => b2[0] - a[0]);
-  return { score: s, label: label(s), why: why.slice(0, 3).map((x) => x[1]) };
+  const { score, hits } = applyRules(SCORING.trail, h, b);
+  return finish(score, hits);
 }
 
 export function scoreSkimo(h) {
   const b = h.summit;
-  const why = [];
-  const depth = Number.isFinite(h.snowDepth) ? h.snowDepth : null;
-  let s = 74;
-  const hit = (amount, text) => {
-    if (!Number.isFinite(amount) || amount <= 0) return;
-    s -= amount;
-    if (amount > 3) why.push([amount, text]);
-  };
+  if (!Number.isFinite(b.temp) || !Number.isFinite(b.wind)) return NO_DATA;
 
-  if (depth !== null) {
-    if (depth < 0.05) return { score: 3, label: 'Out of season', why: ['no snow cover'] };
-    if (depth < 0.3) hit(clamp((0.3 - depth) * 90, 0, 28), 'thin cover');
-    else s += clamp((depth - 0.3) * 22, 0, 14);
-  } else {
-    // No snow-depth field answered. Fall back to a seasonal sanity check so the
+  const depth = Number.isFinite(h.snowDepth) ? h.snowDepth : null;
+  if (depth !== null && depth < 0.05) return OUT_OF_SEASON;
+  if (depth === null) {
+    // No model reported snow depth. Fall back to a seasonal sanity check so the
     // app never promises a ski tour on a green August summit.
     const month = h.time.getMonth();
-    const summery = month >= 5 && month <= 8 && b.temp > 6 && Number.isFinite(h.freezingLevel) && h.freezingLevel > b.z + 400;
+    const summery = month >= 5 && month <= 8 && b.temp > 6
+      && Number.isFinite(h.freezingLevel) && h.freezingLevel > b.z + 400;
     if (summery) return { score: 5, label: 'Out of season', why: ['snow cover unknown, freezing level far above summit'] };
-    hit(6, 'snow cover unknown');
   }
-  s += clamp(h.newSnow24 * 1.6, 0, 18);
-  hit(clamp((b.wind - 8) * 3.1, 0, 36), 'wind');
-  hit(clamp((b.gust - 18) * 1.5, 0, 14), 'gusts');
-  hit(clamp(b.rain * 18, 0, 38), 'rain on snow');
-  if (h.summitInCloud) hit(15, 'flat light, no visibility');
-  else if ((h.cloud ?? 0) > 85) hit(7, 'flat light');
-  if (Number.isFinite(b.feels) && b.feels < -20) hit(clamp((-20 - b.feels) * 1.6, 0, 18), 'severe cold');
-  if (b.temp > 3) hit(clamp((b.temp - 3) * 5, 0, 16), 'warm, wet snow');
-  if (h.drift > 45) hit(clamp(h.drift * 0.18, 0, 18), 'wind slab building');
-  if (!h.daylight) hit(12, 'darkness');
 
-  if (!Number.isFinite(b.temp) || !Number.isFinite(b.wind)) return NO_DATA;
-  s = clamp(Math.round(s), 0, 100);
-  why.sort((a, b2) => b2[0] - a[0]);
-  return { score: s, label: label(s), why: why.slice(0, 3).map((x) => x[1]) };
+  const { score, hits } = applyRules(SCORING.skimo, h, b);
+  if (depth === null) hits.push([6, 'snow cover unknown']);
+  return finish(depth === null ? score - 6 : score, hits);
 }
 
 /** Best contiguous daylight window of `len` hours for an activity.
