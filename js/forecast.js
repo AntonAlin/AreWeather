@@ -1,12 +1,12 @@
 /* Assembly: turn four raw API payloads plus the learned parameters into one
    view model that the UI can render without doing any meteorology of its own. */
 
-import { APP, SCORING } from './config.js';
+import { APP, SCORING, activitiesFor, activityById } from './config.js';
 import { series, members } from './api.js';
 import {
   buildSounding, temperatureAt, humidityAt, windAt, precipAt,
   wetBulb, dewPoint, feelsLike, phase, snowRatio, snowLine, lclHeight,
-  driftIndex, toUV, fromUV, lapseRate,
+  driftIndex, toUV, fromUV, lapseRate, moonIllumination,
 } from './physics.js';
 import { modelWeights, correctTemperature, correctWind, precipProbability } from './ml.js';
 import { clamp, mean, quantile, parseLocal } from './util.js';
@@ -210,10 +210,12 @@ export function assemble(mtn, { surface, profile, ensemble, ml }) {
   }
 
   const daily = buildDaily(surface, hours);
+  const activities = activitiesFor(mtn);
   for (const h of hours) {
     h.daylight = isDaylight(h.time, daily);
-    h.trail = scoreTrail(h);
-    h.skimo = scoreSkimo(h);
+    h.moon = moonIllumination(h.time);
+    h.scores = {};
+    for (const activity of activities) h.scores[activity.id] = scoreActivity(activity, h);
   }
 
   return {
@@ -224,6 +226,7 @@ export function assemble(mtn, { surface, profile, ensemble, ml }) {
     daily,
     times,
     modelKeys: usableKeys,
+    activities,
     weights,
     ml,
     ensembleModel: ensemble?._model ?? null,
@@ -310,26 +313,32 @@ function isDaylight(t, daily) {
 }
 
 /* ---------- activity scoring ----------
-   The rules themselves live in SCORING in config.js so that the method page
-   can print exactly what ran. This is only the machinery that applies them. */
+   The rules live in ACTIVITIES in config.js so the method page can print
+   exactly what ran. This is only the machinery that applies them. */
 
 const NO_DATA = { score: 0, label: 'No data', why: ['forecast data missing for this hour'] };
-const OUT_OF_SEASON = { score: 3, label: 'Out of season', why: ['no snow cover'] };
 
-/** Values a scoring rule can ramp against. */
+/** Values a rule can ramp against. */
 const METRICS = {
   precip: (h, b) => b.precip,
   rain: (h, b) => b.rain,
   wind: (h, b) => b.wind,
   gust: (h, b) => b.gust,
+  /** how much the gusts exceed the sustained wind — steadiness, for kiting */
+  gustSpread: (h, b) => (Number.isFinite(b.gust) && Number.isFinite(b.wind) ? b.gust - b.wind : NaN),
   temp: (h, b) => b.temp,
   feels: (h, b) => b.feels,
   /** how far below freezing it feels — ramps the other way from `feels` */
   chill: (h, b) => -b.feels,
+  cloud: (h) => h.cloud,
+  moon: (h) => h.moon,
+  visibility: (h) => h.visibility,
   snowDepth: (h) => h.snowDepth,
   coverDeficit: (h) => (Number.isFinite(h.snowDepth) ? 0.3 - h.snowDepth : NaN),
   coverSurplus: (h) => (Number.isFinite(h.snowDepth) ? h.snowDepth - 0.3 : NaN),
   newSnow24: (h) => h.newSnow24,
+  rain24: (h) => h.rain24,
+  precip24: (h) => h.precip24,
   drift: (h) => h.drift,
 };
 
@@ -340,17 +349,48 @@ const FLAGS = {
   night: (h) => !h.daylight,
   sleet: (h, b) => b.phase === 'mix',
   thunder: (h) => Number.isFinite(h.cape) && h.cape > 700,
+  freezing: (h, b) => Number.isFinite(b.temp) && b.temp < -1,
 };
 
 const labelFor = (s) => (SCORING.labels.find(([min]) => s >= min) ?? [0, 'Poor'])[1];
 
-function applyRules(spec, h, b) {
-  let score = spec.base;
+/**
+ * Snow-cover gate. An activity with a season either runs or it does not, and
+ * saying "score 42" for ski touring in July would be worse than useless.
+ */
+function seasonGate(activity, h) {
+  const season = activity.season;
+  if (!season) return null;
+  const depth = Number.isFinite(h.snowDepth) ? h.snowDepth : null;
+
+  if (depth === null) {
+    // No model reported snow depth. Fall back to a seasonal sanity check so the
+    // app never promises a ski tour on a green August summit.
+    const month = h.time.getMonth();
+    const summery = month >= 5 && month <= 8 && h.summit.temp > 6
+      && Number.isFinite(h.freezingLevel) && h.freezingLevel > h.summit.z + 400;
+    if (season.snowMin != null && summery) {
+      return { out: { score: 5, label: 'Out of season', why: [`${season.under ?? 'no snow cover'} — freezing level far above the summit`] } };
+    }
+    return { penalty: 6, note: 'snow cover unknown' };
+  }
+  if (season.snowMin != null && depth < season.snowMin) {
+    return { out: { score: 3, label: 'Out of season', why: [season.under ?? 'no snow cover'] } };
+  }
+  if (season.snowMax != null && depth > season.snowMax) {
+    return { out: { score: 4, label: 'Out of season', why: [season.over ?? 'snow on the ground'] } };
+  }
+  return null;
+}
+
+function applyRules(activity, h, b) {
+  let score = activity.base;
   const hits = [];
-  for (const r of spec.rules) {
+  for (const r of activity.rules) {
     let delta = 0;
     if (r.kind === 'flag') {
-      delta = FLAGS[r.flag]?.(h, b) ? -r.amount : 0;
+      const fired = !!FLAGS[r.flag]?.(h, b);
+      delta = (r.invert ? !fired : fired) ? -r.amount : 0;
     } else {
       const v = METRICS[r.metric]?.(h, b);
       if (!Number.isFinite(v)) continue;
@@ -371,31 +411,15 @@ const finish = (score, hits) => {
   return { score: v, label: labelFor(v), why: hits.slice(0, 3).map((x) => x[1]) };
 };
 
-export function scoreTrail(h) {
+/** Score one activity for one hour. */
+export function scoreActivity(activity, h) {
   const b = h.summit;
   if (!Number.isFinite(b.temp) || !Number.isFinite(b.wind)) return NO_DATA;
-  const { score, hits } = applyRules(SCORING.trail, h, b);
-  return finish(score, hits);
-}
-
-export function scoreSkimo(h) {
-  const b = h.summit;
-  if (!Number.isFinite(b.temp) || !Number.isFinite(b.wind)) return NO_DATA;
-
-  const depth = Number.isFinite(h.snowDepth) ? h.snowDepth : null;
-  if (depth !== null && depth < 0.05) return OUT_OF_SEASON;
-  if (depth === null) {
-    // No model reported snow depth. Fall back to a seasonal sanity check so the
-    // app never promises a ski tour on a green August summit.
-    const month = h.time.getMonth();
-    const summery = month >= 5 && month <= 8 && b.temp > 6
-      && Number.isFinite(h.freezingLevel) && h.freezingLevel > b.z + 400;
-    if (summery) return { score: 5, label: 'Out of season', why: ['snow cover unknown, freezing level far above summit'] };
-  }
-
-  const { score, hits } = applyRules(SCORING.skimo, h, b);
-  if (depth === null) hits.push([6, 'snow cover unknown']);
-  return finish(depth === null ? score - 6 : score, hits);
+  const gate = seasonGate(activity, h);
+  if (gate?.out) return gate.out;
+  const { score, hits } = applyRules(activity, h, b);
+  if (gate?.penalty) hits.push([gate.penalty, gate.note]);
+  return finish(gate?.penalty ? score - gate.penalty : score, hits);
 }
 
 /**
@@ -405,7 +429,9 @@ export function scoreSkimo(h) {
  * Today is measured from `fromIndex` onwards — a morning that has already
  * happened should not win you a recommendation at four in the afternoon.
  */
-export function dailySummaries(model, activity, { windowLen = 3, fromIndex = 0 } = {}) {
+export function dailySummaries(model, activityId, { windowLen, fromIndex = 0 } = {}) {
+  const activity = activityById(activityId);
+  const len = windowLen ?? activity.window ?? 3;
   const byDate = new Map();
   for (let i = Math.max(0, fromIndex); i < model.hours.length; i++) {
     const h = model.hours[i];
@@ -416,29 +442,32 @@ export function dailySummaries(model, activity, { windowLen = 3, fromIndex = 0 }
 
   const out = [];
   for (const [date, hs] of byDate) {
-    const daylight = hs.filter((h) => h.daylight);
-    const pool = daylight.length >= windowLen ? daylight : hs;
+    // An activity that happens after dark should be scored after dark.
+    const wanted = activity.night ? hs.filter((h) => !h.daylight) : hs.filter((h) => h.daylight);
+    const pool = wanted.length >= len ? wanted : hs;
     let best = null;
-    for (let i = 0; i + windowLen <= pool.length; i++) {
-      const slice = pool.slice(i, i + windowLen);
+    for (let i = 0; i + len <= pool.length; i++) {
+      const slice = pool.slice(i, i + len);
       // Only contiguous hours count as a window.
-      if (slice[windowLen - 1].i - slice[0].i !== windowLen - 1) continue;
-      const score = mean(slice.map((h) => h[activity].score));
+      if (slice[len - 1].i - slice[0].i !== len - 1) continue;
+      const score = mean(slice.map((h) => h.scores[activity.id].score));
       if (!best || score > best.score) {
+        const middle = slice[Math.floor(len / 2)].scores[activity.id];
         best = {
           score,
           startTime: slice[0].time,
-          endTime: slice[windowLen - 1].time,
+          endTime: slice[len - 1].time,
           dark: !slice.every((h) => h.daylight),
-          why: slice[Math.floor(windowLen / 2)][activity].why,
-          label: slice[Math.floor(windowLen / 2)][activity].label,
-          hour: slice[Math.floor(windowLen / 2)],
+          why: middle.why,
+          label: middle.label,
+          hour: slice[Math.floor(len / 2)],
         };
       }
     }
     if (!best && hs.length) {
       const h = hs[0];
-      best = { score: h[activity].score, startTime: h.time, endTime: h.time, dark: !h.daylight, why: h[activity].why, label: h[activity].label, hour: h };
+      const sc = h.scores[activity.id];
+      best = { score: sc.score, startTime: h.time, endTime: h.time, dark: !h.daylight, why: sc.why, label: sc.label, hour: h };
     }
     const temps = hs.map((h) => h.summit.temp).filter(Number.isFinite);
     const winds = hs.map((h) => h.summit.wind).filter(Number.isFinite);
@@ -462,21 +491,22 @@ export function dailySummaries(model, activity, { windowLen = 3, fromIndex = 0 }
 
 /** Best contiguous daylight window of `len` hours for an activity.
  *  Returns Date objects, or null when there is nothing to choose from. */
-export function bestWindow(hours, activity, { len = 4, within = 48 } = {}) {
+export function bestWindow(hours, activityId, { len, within = 48 } = {}) {
+  const activity = activityById(activityId);
+  const span = len ?? activity.window ?? 4;
   const pool = hours.slice(0, within);
-  let best = null;
-  for (let i = 0; i + len <= pool.length; i++) {
-    const slice = pool.slice(i, i + len);
-    if (!slice.every((h) => h.daylight)) continue;
-    const avg = mean(slice.map((h) => h[activity].score));
-    if (!best || avg > best.score) best = { start: slice[0].time, end: slice[len - 1].time, score: avg };
-  }
-  if (!best) {
-    for (let i = 0; i + len <= pool.length; i++) {
-      const slice = pool.slice(i, i + len);
-      const avg = mean(slice.map((h) => h[activity].score));
-      if (!best || avg > best.score) best = { start: slice[0].time, end: slice[len - 1].time, score: avg, dark: true };
+  const wants = (h) => (activity.night ? !h.daylight : h.daylight);
+  const scan = (filter) => {
+    let found = null;
+    for (let i = 0; i + span <= pool.length; i++) {
+      const slice = pool.slice(i, i + span);
+      if (filter && !slice.every(wants)) continue;
+      const avg = mean(slice.map((h) => h.scores[activity.id].score));
+      if (!found || avg > found.score) {
+        found = { start: slice[0].time, end: slice[span - 1].time, score: avg, dark: !slice.every((h) => h.daylight) };
+      }
     }
-  }
-  return best;
+    return found;
+  };
+  return scan(true) ?? scan(false);
 }

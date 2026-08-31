@@ -37,13 +37,10 @@
     <div class="card-head">
       <div>
         <h2 id="picks-title">Where to go</h2>
-        <p class="sub" id="picks-sub">Every peak, scored hour by hour for the next seven days, and the best three-hour window on each.</p>
+        <p class="sub" id="picks-sub">Every peak, scored hour by hour for the next seven days, and the best window on each.</p>
       </div>
       <div class="controls">
-        <div class="seg" id="activity" role="group" aria-label="Activity">
-          <button type="button" data-activity="trail" class="on" aria-pressed="true">Trail running</button>
-          <button type="button" data-activity="skimo" aria-pressed="false">Ski mountaineering</button>
-        </div>
+        <div class="seg seg-wrap" id="activity" role="group" aria-label="Activity"></div>
       </div>
     </div>
     <div class="picks" id="picks-grid"></div>
@@ -54,7 +51,7 @@
     <div class="card-head">
       <div>
         <h2>All peaks, all week</h2>
-        <p class="sub">Each cell is the best three-hour daylight window that day, and its score. Click one to open that mountain.</p>
+        <p class="sub">Each cell is the best window that day, and its score — three hours for a run, eight for a hut-to-hut stage, after dark for the aurora. Click one to open that mountain.</p>
       </div>
       <div class="controls">
         <div class="seg" id="sort" role="group" aria-label="Sort order">

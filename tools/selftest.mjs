@@ -6,8 +6,8 @@
 
    Run: node tools/selftest.mjs */
 
-import { MODELS, PRESSURE_LEVELS, SCORING, SOURCES } from '../js/config.js';
-import { assemble, bandsFor, scoreTrail, scoreSkimo, dailySummaries } from '../js/forecast.js';
+import { MODELS, PRESSURE_LEVELS, ACTIVITIES, SOURCES, activitiesFor, activityById } from '../js/config.js';
+import { assemble, bandsFor, scoreActivity, dailySummaries, bestWindow } from '../js/forecast.js';
 import { train, correctTemperature, modelWeights } from '../js/ml.js';
 import { distanceKm, parseStationSet, nearestStations, collectStation, compareWithModel, buildObservations } from '../js/observations.js';
 import { wetBulb, dewPoint, windChill, snowRatio, buildSounding, temperatureAt } from '../js/physics.js';
@@ -99,7 +99,7 @@ function makeEnsemble(times, { baseTemp = -4 } = {}) {
   return { hourly, _model: 'icon_eu' };
 }
 
-const MTN = { id: 'test', name: 'Testfjället', lat: 63.4, lon: 13.06, summit: 1420, base: 400, exposure: 1.3, tags: ['Trail running'] };
+const MTN = { id: 'test', name: 'Testfjället', lat: 63.4, lon: 13.06, summit: 1420, base: 400, exposure: 1.3, tags: ['Trail running'], features: ['lift', 'plateau'] };
 
 /* ---------- 1. thermodynamics ---------- */
 console.log('\nThermodynamics');
@@ -148,7 +148,7 @@ console.log('\nAssembly');
   ok(Number.isFinite(h.ens?.t10) && h.ens.t10 < h.ens.t90, 'ensemble percentiles are ordered');
   ok(h.pop >= 0 && h.pop <= 1, 'precipitation probability is a probability');
   ok(h.newSnow24 >= 0 && h.precip24 >= 0, 'accumulations are non-negative');
-  ok(h.trail.score >= 0 && h.trail.score <= 100 && h.skimo.score >= 0 && h.skimo.score <= 100, 'activity scores are in range');
+  ok(Object.values(h.scores).every((v) => v.score >= 0 && v.score <= 100), `all ${Object.keys(h.scores).length} activity scores are in range`);
   ok(model.hours.every((x) => x.bands.length === bandsFor(MTN).length), 'band count is stable across all hours');
 }
 
@@ -248,14 +248,17 @@ console.log('\nDaily summaries');
   ok(days.length === 5 || days.length === 6, `one summary per calendar day (${days.length})`);
   ok(days.every((d) => Number.isFinite(d.best.score)), 'every day has a scored best window');
   ok(days.every((d) => d.best.endTime >= d.best.startTime), 'windows do not run backwards');
-  ok(days.every((d) => d.best.score >= Math.min(...d.hours.map((h) => h.trail.score)) - 0.01), 'best window is not worse than the worst hour');
-  ok(days.every((d) => d.best.score <= Math.max(...d.hours.map((h) => h.trail.score)) + 0.01), 'best window is not better than the best hour');
+  ok(days.every((d) => d.best.score >= Math.min(...d.hours.map((h) => h.scores.trail.score)) - 0.01), 'best window is not worse than the worst hour');
+  ok(days.every((d) => d.best.score <= Math.max(...d.hours.map((h) => h.scores.trail.score)) + 0.01), 'best window is not better than the best hour');
   ok(days.every((d) => d.precip >= 0 && d.newSnow >= 0), 'daily accumulations are non-negative');
   ok(days.every((d) => !Number.isFinite(d.tMax) || d.tMax >= d.tMin), 'daily maximum is not below the minimum');
 
   // Windows must be contiguous hours, not a stitched-together best-of.
   const spans = days.map((d) => (d.best.endTime - d.best.startTime) / 3.6e6);
   ok(spans.every((s2) => s2 === 2 || s2 === 0), `3-hour windows span exactly 2 hours end to end (${[...new Set(spans)].join(', ')})`);
+  const long = dailySummaries(model, 'thru');
+  const longSpans = long.map((d) => (d.best.endTime - d.best.startTime) / 3.6e6);
+  ok(longSpans.every((s2) => s2 === 7 || s2 === 0), `hut-to-hut uses its own 8-hour window (${[...new Set(longSpans)].join(', ')})`);
 
   // Hours already past must not win today a recommendation.
   const late = dailySummaries(model, 'trail', { fromIndex: 20 });
@@ -335,22 +338,65 @@ console.log('\nConfiguration');
   const times = makeTimes(24);
   const model = assemble(MTN, { surface: makeSurface(times), profile: makeProfile(times), ensemble: null, ml: null });
   const h = model.hours[8];
-  // A rule that references a metric or flag nobody implements would silently
-  // never fire, so assert every one of them resolves.
+
   const metrics = new Set(), flags = new Set();
-  for (const spec of [SCORING.trail, SCORING.skimo]) {
-    for (const r of spec.rules) (r.kind === 'flag' ? flags : metrics).add(r.kind === 'flag' ? r.flag : r.metric);
+  for (const a of ACTIVITIES) {
+    for (const r of a.rules) (r.kind === 'flag' ? flags : metrics).add(r.kind === 'flag' ? r.flag : r.metric);
   }
-  const probe = { ...h, snowDepth: 0.5, cape: 900, cloud: 95, summitInCloud: false, daylight: false };
-  const trail = scoreTrail(probe), skimo = scoreSkimo(probe);
-  ok(Number.isFinite(trail.score) && Number.isFinite(skimo.score), 'both activities score a fully-populated hour');
-  ok([...metrics].every((m) => Number.isFinite(scoreTrail(probe).score)), `all ${metrics.size} scoring metrics resolve`);
-  ok([...flags].length === 5, `all ${flags.size} scoring flags declared`);
-  ok(SCORING.trail.rules.every((r) => (r.kind === 'flag' ? r.amount > 0 : r.cap > 0 && r.label)), 'every trail rule has a cap and a label');
-  ok(SCORING.skimo.rules.every((r) => (r.kind === 'flag' ? r.amount > 0 : r.cap > 0 && r.label)), 'every skimo rule has a cap and a label');
+
+  // A rule naming a metric or flag nobody implements would silently never fire.
+  const probe = { ...h, snowDepth: 0.5, cape: 900, cloud: 95, summitInCloud: false, daylight: false, moon: 0.2 };
+  const scored = ACTIVITIES.map((a) => [a.id, scoreActivity(a, probe)]);
+  ok(scored.every(([, v]) => Number.isFinite(v.score)), `all ${ACTIVITIES.length} activities score a fully-populated hour`);
+  ok(scored.every(([, v]) => v.score >= 0 && v.score <= 100), 'every score stays inside 0–100');
+  ok(ACTIVITIES.every((a) => a.rules.every((r) => (r.kind === 'flag' ? r.amount > 0 : r.cap > 0) && r.label && r.why)),
+    `all ${ACTIVITIES.reduce((n, a) => n + a.rules.length, 0)} rules carry a cap, a label and a reason`);
+  ok(new Set(ACTIVITIES.map((a) => a.id)).size === ACTIVITIES.length, 'activity ids are unique');
+  ok(ACTIVITIES.every((a) => a.window >= 1 && a.base > 0 && a.short && a.name), 'every activity has a window, a base and both names');
+
+  // Aurora is the one activity that wants darkness; it must not be recommended at noon.
+  const noon = { ...h, daylight: true, cloud: 0, moon: 0 };
+  const night = { ...h, daylight: false, cloud: 0, moon: 0 };
+  ok(scoreActivity(activityById('aurora'), night).score > scoreActivity(activityById('aurora'), noon).score + 40,
+    `aurora scores far better at night (${scoreActivity(activityById('aurora'), night).score} vs ${scoreActivity(activityById('aurora'), noon).score})`);
+  const dark = dailySummaries(model, 'aurora')[0];
+  ok(dark.best.dark === true, 'the aurora window is picked after dark rather than in daylight');
+
+  // Snowkiting is the one activity that wants wind.
+  const kite = activityById('kite');
+  const calm = { ...h, snowDepth: 0.6, summit: { ...h.summit, wind: 2, gust: 3 } };
+  const breezy = { ...h, snowDepth: 0.6, summit: { ...h.summit, wind: 11, gust: 13 } };
+  const storm = { ...h, snowDepth: 0.6, summit: { ...h.summit, wind: 26, gust: 34 } };
+  ok(scoreActivity(kite, breezy).score > scoreActivity(kite, calm).score, 'snowkiting scores wind as a good thing');
+  ok(scoreActivity(kite, breezy).score > scoreActivity(kite, storm).score, 'but not an unlimited amount of it');
+  // The same two winds, on bare ground, where trail running is actually in season.
+  const bareBreezy = { ...breezy, snowDepth: 0 };
+  const bareStorm = { ...storm, snowDepth: 0 };
+  ok(scoreActivity(activityById('trail'), bareBreezy).score > scoreActivity(activityById('trail'), bareStorm).score,
+    'while running prefers the calmer of the same two winds');
+  ok(scoreActivity(activityById('trail'), { ...bareBreezy, snowDepth: 0.6 }).label === 'Out of season',
+    'and running is out of season under deep snow, rather than merely scoring badly');
+
+  // Seasons gate rather than score.
+  const summer = { ...h, snowDepth: 0, time: new Date(2026, 6, 15, 12) };
+  const winter = { ...h, snowDepth: 0.8, time: new Date(2026, 0, 15, 12) };
+  ok(scoreActivity(activityById('skimo'), summer).label === 'Out of season', 'no ski touring without snow');
+  ok(scoreActivity(activityById('bike'), winter).label === 'Out of season', 'no bike park under 80 cm of snow');
+  ok(scoreActivity(activityById('bike'), summer).label !== 'Out of season', 'the bike park runs on bare ground');
+  ok(scoreActivity(activityById('skimo'), winter).label !== 'Out of season', 'and ski touring runs on snow');
+
+  // Terrain gating.
+  const liftless = { ...MTN, features: ['plateau'] };
+  ok(!activitiesFor(liftless).some((a) => a.requires === 'lift'), 'lift-served activities are hidden without a lift');
+  ok(activitiesFor(liftless).some((a) => a.id === 'kite'), 'but plateau activities are offered');
+  ok(activitiesFor({ ...MTN, features: [] }).every((a) => !a.requires), 'a featureless peak offers only universal activities');
+  ok(model.activities.length === activitiesFor(MTN).length, 'the assembled model carries its own activity list');
+
   ok(SOURCES.providers.length === MODELS.length, `every model has a provenance entry (${SOURCES.providers.length}/${MODELS.length})`);
   ok(MODELS.every((m) => SOURCES.providers.some((p) => p.key === m.key)), 'provenance keys match model keys');
   ok(SOURCES.providers.every((p) => p.licence && p.credit && p.licenceUrl), 'every provider has a licence, a credit line and a licence link');
+  ok(Number.isFinite(bestWindow(model.hours, 'hike')?.score), 'bestWindow works for a newly added activity');
+  ok(metrics.size >= 10 && flags.size >= 5, `${metrics.size} metrics and ${flags.size} flags in use across the registry`);
 }
 
 /* ---------- 10. degraded inputs ---------- */
@@ -367,8 +413,8 @@ console.log('\nGraceful degradation');
   const oneModel = assemble(MTN, { surface: sparse, profile: null, ensemble: null, ml: null });
   ok(Number.isFinite(oneModel.hours[0].summit.temp), 'survives when only one model returns temperature');
 
-  const scoreless = { summit: { temp: NaN, feels: NaN, wind: NaN, gust: NaN, precip: NaN, rain: NaN, phase: 'unknown', z: 1420 }, daylight: true, time: new Date(), newSnow24: 0, drift: 0, cloud: 0, freezingLevel: NaN };
-  ok(Number.isFinite(scoreTrail(scoreless).score) && Number.isFinite(scoreSkimo(scoreless).score), 'scoring survives an all-NaN hour');
+  const scoreless = { summit: { temp: NaN, feels: NaN, wind: NaN, gust: NaN, precip: NaN, rain: NaN, phase: 'unknown', z: 1420 }, daylight: true, time: new Date(), newSnow24: 0, drift: 0, cloud: 0, freezingLevel: NaN, moon: 0.5 };
+  ok(ACTIVITIES.every((a) => Number.isFinite(scoreActivity(a, scoreless).score)), 'every activity survives an all-NaN hour');
 }
 
 console.log(`\n${failures ? `${failures} FAILED` : 'all checks passed'}\n`);

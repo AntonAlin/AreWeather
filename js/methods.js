@@ -2,7 +2,7 @@
    on. Nothing here is a transcription of the code — if a constant changes, this
    page changes with it, which is the only way documentation stays true. */
 
-import { APP, PHYS, PRESSURE_LEVELS, MOUNTAINS, MODELS, SCORING, SOURCES, CONTACT, SMHI } from './config.js';
+import { APP, PHYS, PRESSURE_LEVELS, MOUNTAINS, MODELS, ACTIVITIES, SCORING, SOURCES, CONTACT, SMHI, activitiesFor } from './config.js';
 import { TEMP_FEATURES } from './ml.js';
 import { snowRatio } from './physics.js';
 import { $, $$, el, round } from './util.js';
@@ -145,22 +145,48 @@ const FEATURE_WHY = {
 table('#features-table', ['Feature', 'Why it is in the model'],
   TEMP_FEATURES.map((f) => [`<code>${f}</code>`, FEATURE_WHY[f] ?? '']));
 
-/* ---------- 8. scoring, straight from SCORING ---------- */
-function ruleRows(spec) {
-  return spec.rules.map((r) => {
+/* ---------- 8. scoring, straight from the activity registry ---------- */
+function ruleRows(activity) {
+  return activity.rules.map((r) => {
     const effect = r.kind === 'flag'
       ? `−${r.amount} flat`
       : `${r.kind === 'bonus' ? '+' : '−'}(value − ${r.from}) × ${r.slope}, capped at ${r.cap}`;
     const trigger = r.reads
       ? `${r.reads}<br><span class="muted" style="font-size:.9em"><code>${r.metric}</code></span>`
-      : r.kind === 'flag' ? `<code>${r.flag}</code>` : `<code>${r.metric}</code> above ${r.from}`;
+      : r.kind === 'flag'
+        ? `<code>${r.flag}</code>${r.invert ? ' is <b>false</b>' : ''}`
+        : `<code>${r.metric}</code> above ${r.from}`;
     return [r.label, trigger, effect, r.why];
   });
 }
-$('#trail-base').textContent = SCORING.trail.base;
-$('#skimo-base').textContent = SCORING.skimo.base;
-table('#trail-table', ['Factor', 'Triggers on', 'Effect on the score', 'Reasoning'], ruleRows(SCORING.trail));
-table('#skimo-table', ['Factor', 'Triggers on', 'Effect on the score', 'Reasoning'], ruleRows(SCORING.skimo));
+
+const tables = $('#activity-tables');
+for (const activity of ACTIVITIES) {
+  const h3 = el('h3', {}, tables);
+  h3.innerHTML = `${activity.name} <span class="muted" style="font-weight:400">· base <span class="num">${activity.base}</span> · `
+    + `${activity.window}-hour window${activity.requires ? ` · needs <code>${activity.requires}</code> terrain` : ''}</span>`;
+  el('p', { text: activity.blurb }, tables);
+  const wrap = el('div', { class: 'table-scroll' }, tables);
+  const t = el('table', { id: `rules-${activity.id}` }, wrap);
+  table(`#rules-${activity.id}`, ['Factor', 'Triggers on', 'Effect on the score', 'Reasoning'], ruleRows(activity));
+  if (!t.querySelector('tbody tr')) t.remove();
+}
+
+table('#seasons-table', ['Activity', 'Runs when', 'Otherwise'],
+  ACTIVITIES.filter((a) => a.season).map((a) => [
+    a.name,
+    [a.season.snowMin != null ? `snow depth ≥ ${a.season.snowMin} m` : null,
+      a.season.snowMax != null ? `snow depth ≤ ${a.season.snowMax} m` : null].filter(Boolean).join(' and '),
+    `<i>${a.season.under ?? a.season.over}</i>`,
+  ]));
+
+table('#terrain-table', ['Peak', 'Terrain', 'Activities offered'],
+  MOUNTAINS.map((m) => [
+    m.name,
+    (m.features ?? []).map((f) => `<code>${f}</code>`).join(' ') || '—',
+    activitiesFor(m).map((a) => a.short).join(', '),
+  ]));
+
 table('#labels-table', ['Score', 'Verdict'],
   SCORING.labels.map(([min, word], i) => {
     const upper = i === 0 ? 100 : SCORING.labels[i - 1][0] - 1;

@@ -36,8 +36,12 @@ day the summit is *warmer* than the village. This app forecasts every 100 m band
   thermometers actually report against what the forecast claims at their exact elevation — plus a
   rolling verification log kept in your browser, so after a few days the app can state its own
   measured bias at that peak. Observations are never blended into the forecast.
-- **Activity verdicts** for trail running and ski mountaineering, each with the specific factor
-  that is limiting it and the best window in the next 48 hours.
+- **Eight activities scored side by side** — trail running, hiking, hut-to-hut, ski mountaineering,
+  alpine skiing, downhill biking, snowkiting and aurora watching — ranked by how good each one is
+  right now, each with the specific factor limiting it and its best window. Every sport has its own
+  window length, its own season, and its own idea of good: snowkiting is the only score on the site
+  that *rewards* a gale, and aurora watching is the only one scored after dark. Activities are
+  gated on terrain, so a bike park lap is not offered on a peak with no lift.
 - **A comparison view** answering the question people actually have — *where should I go on
   Saturday?* — by scoring all ten peaks across the next seven days in one grid, with the best
   three-hour daylight window on each day. Two small requests per peak, three at a time, sharing the
@@ -112,12 +116,32 @@ Everything about a peak lives in one object in [`js/config.js`](js/config.js):
 {
   id: 'areskutan', name: 'Åreskutan', lat: 63.4262, lon: 13.0665,
   summit: 1420, base: 380, exposure: 1.34,
+  features: ['lift', 'forest'],
   blurb: '…', tags: ['Trail running', 'Ski mountaineering'],
 }
 ```
 
 `exposure` is the terrain wind-acceleration factor at the summit (≈1.0 for a sheltered forested top,
-≈1.4 for a bare exposed dome). Nothing else in the codebase knows about specific mountains.
+≈1.4 for a bare exposed dome). `features` decides which activities are offered: `lift` unlocks
+alpine skiing and the bike park, `plateau` unlocks snowkiting. Nothing else in the codebase knows
+about specific mountains.
+
+## Adding a sport
+
+Activities are data too, in the `ACTIVITIES` array of the same file. A rule is one of three shapes:
+
+```js
+{ kind: 'ramp',  metric: 'wind', from: 6,  slope: 3.4, cap: 34, label: 'wind', why: '…' }
+{ kind: 'bonus', metric: 'wind', from: 5,  slope: 3.4, cap: 36, label: 'usable wind', why: '…' }
+{ kind: 'flag',  flag: 'night', invert: true, amount: 70, label: 'daylight', why: '…' }
+```
+
+A `ramp` costs `clamp((value − from) × slope, 0, cap)` points, a `bonus` adds the same, and a `flag`
+costs a flat amount when its condition holds — or when it does not, if `invert` is set. Add
+`season: { snowMin }` or `{ snowMax }` and the activity reports *out of season* instead of a
+misleading number; add `requires: 'lift'` to gate it on terrain; set `night: true` and its best
+window is picked after dark. The scorer, the comparison grid and the method page all read the same
+definition, so documentation cannot drift from behaviour.
 
 Physical tunables — lapse-rate fallback, anchor decay scale, orographic enhancement, wet-bulb phase
 thresholds, snow-drift threshold — are all together in the `PHYS` block of the same file.

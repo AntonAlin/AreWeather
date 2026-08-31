@@ -396,20 +396,24 @@ band at elevation <em>z</em> = quantile + [ <em>T</em>(<em>z</em>) − <em>T</em
 
       <section class="card" id="scoring">
         <h2>8 · Activity scores</h2>
-        <p>Both scores start from a base and lose points to named penalties, so the interface can
+        <p>Each score starts from a base and loses points to named penalties, so the interface can
           tell you <i>what</i> is wrong rather than only that something is. A <code>ramp</code>
           costs <code>clamp((value − from) × slope, 0, cap)</code> points; a <code>flag</code> costs
-          a flat amount when its condition holds; a <code>bonus</code> adds points the same way.
-          The result is clamped to 0–100.</p>
+          a flat amount when its condition holds — or when it does not, if it is inverted; a
+          <code>bonus</code> adds points the same way. The result is clamped to 0–100.</p>
         <p>These tables are generated from the same configuration the scorer runs on — they cannot
           drift out of date.</p>
-        <h3>Trail running · base <span class="num" id="trail-base"></span></h3>
-        <div class="table-scroll"><table id="trail-table"></table></div>
-        <h3>Ski mountaineering · base <span class="num" id="skimo-base"></span></h3>
-        <div class="table-scroll"><table id="skimo-table"></table></div>
-        <p>Ski mountaineering additionally returns <b>Out of season</b> outright when modelled snow
-          depth is below 5 cm, or — if no model reports snow depth at all — when it is summer, the
-          summit is above 6 °C and the freezing level sits more than 400 m above it.</p>
+        <div id="activity-tables"></div>
+        <h3>Seasons</h3>
+        <p>An activity with a snow-cover season returns <b>Out of season</b> outright rather than a
+          number — a ski tour in July is not a bad day out, it is not a day out at all. When no model
+          reports snow depth, a summer sanity check stands in: high summit temperature and a freezing
+          level far above the summit means no snow, whatever the missing field would have said.</p>
+        <div class="table-scroll"><table id="seasons-table"></table></div>
+        <h3>Where each activity is offered</h3>
+        <p>A bike park lap needs a lift and snowkiting needs open ground, so activities are gated on
+          the terrain a peak actually has rather than offered everywhere and scored badly.</p>
+        <div class="table-scroll"><table id="terrain-table"></table></div>
         <h3>Verdict words</h3>
         <div class="table-scroll"><table id="labels-table"></table></div>
         <div class="callout warn">

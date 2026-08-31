@@ -15,69 +15,83 @@ export const APP = {
   bandStep: 100,
 };
 
-/* Peaks and massifs around Åre that people actually run up or ski off.
+/* Peaks and massifs around Åre that people actually run up, ride down or ski off.
    `summit` / `base` in metres, `exposure` is the terrain wind acceleration
-   factor at the summit (1.0 = sheltered forest, 1.4 = bare exposed dome). */
+   factor at the summit (1.0 = sheltered forest, 1.4 = bare exposed dome).
+
+   `features` decides which activities are offered at all. A bike park lap needs
+   a lift; snowkiting needs open ground to kite across. Add 'lift' to any peak
+   with a lift system and the lift-served activities appear there too. */
 export const MOUNTAINS = [
   {
     id: 'areskutan', name: 'Åreskutan', lat: 63.4262, lon: 13.0665,
     summit: 1420, base: 380, exposure: 1.34,
     blurb: 'The home mountain. Village-to-summit is 1040 m of vert in 6 km — the standard test piece for both running and skinning.',
     tags: ['Trail running', 'Ski mountaineering', 'Lift access'],
+    features: ['lift', 'forest'],
   },
   {
     id: 'mullfjallet', name: 'Mullfjället', lat: 63.4180, lon: 12.9300,
     summit: 1120, base: 450, exposure: 1.24,
     blurb: 'Duved’s quiet neighbour. Broad north-east bowls hold snow late and the ridge line runs fast and dry in summer.',
     tags: ['Ski touring', 'Trail running'],
+    features: ['forest', 'bowl'],
   },
   {
     id: 'renfjallet', name: 'Renfjället', lat: 63.3480, lon: 13.1200,
     summit: 1054, base: 400, exposure: 1.18,
     blurb: 'South of the lake, so it catches sun and loses snow first. Reliable shoulder-season running when the north side is still white.',
     tags: ['Trail running'],
+    features: ['forest'],
   },
   {
     id: 'ottfjallet', name: 'Ottfjället', lat: 63.2500, lon: 13.2450,
     summit: 1246, base: 500, exposure: 1.22,
     blurb: 'The Vålådalen gateway. Long rolling approach, wind-scoured plateau up top.',
     tags: ['Trail running', 'Ski touring'],
+    features: ['plateau', 'forest'],
   },
   {
     id: 'hundshogen', name: 'Hundshögen', lat: 63.2670, lon: 12.7350,
     summit: 1372, base: 600, exposure: 1.30,
     blurb: 'Steep east-facing lines above Ånn and a summit that sees the raw westerly before anywhere else in the valley.',
     tags: ['Ski mountaineering'],
+    features: ['plateau', 'steep'],
   },
   {
     id: 'blahammaren', name: 'Blåhammaren', lat: 63.2010, lon: 12.4040,
     summit: 1086, base: 620, exposure: 1.32,
     blurb: 'Sweden’s highest mountain station. Famously exposed — the wind here is the wind everyone else gets an hour later.',
     tags: ['Ski touring', 'Hut to hut'],
+    features: ['plateau'],
   },
   {
     id: 'storsnasen', name: 'Storsnasen', lat: 63.1780, lon: 12.5060,
     summit: 1462, base: 700, exposure: 1.36,
     blurb: 'The Snasahögarna high point. Big alpine feel, corniced ridges, the classic Storulvån day tour.',
     tags: ['Ski mountaineering', 'Trail running'],
+    features: ['plateau', 'steep'],
   },
   {
     id: 'getryggen', name: 'Getryggen', lat: 63.1160, lon: 12.4380,
     summit: 1250, base: 700, exposure: 1.28,
     blurb: 'The knife-edge between Storulvån and Sylarna. Narrow, loaded on the lee side, a serious place in wind.',
     tags: ['Ski mountaineering'],
+    features: ['plateau', 'steep'],
   },
   {
     id: 'bunnerstoten', name: 'Bunnerstöten', lat: 63.0720, lon: 12.5700,
     summit: 1372, base: 700, exposure: 1.30,
     blurb: 'Bunnerfjällen’s high point above the twin lakes — remote, long approach, superb spring corn.',
     tags: ['Ski mountaineering'],
+    features: ['plateau', 'steep'],
   },
   {
     id: 'storsylen', name: 'Storsylen', lat: 63.0330, lon: 12.2230,
     summit: 1728, base: 800, exposure: 1.40,
     blurb: 'The roof of the region, right on the Norwegian border. Real mountaineering terrain and the harshest weather in the area.',
     tags: ['Ski mountaineering', 'Alpine'],
+    features: ['steep', 'alpine'],
   },
 ];
 
@@ -128,17 +142,27 @@ export const PHYS = {
 };
 
 /* ---------------------------------------------------------------------------
-   Activity scoring, as data rather than buried in code — so the method page
-   can print exactly the rules that ran, and they can never drift apart.
+   Activities.
 
-   A `ramp` rule costs  clamp((value − from) × slope, 0, cap)  points.
+   Every sport this app scores is defined here as data, not code — the scorer
+   applies these rules and the method page prints them, so the two can never
+   disagree. Adding a sport means adding an entry, nothing else.
+
+   A `ramp` rule costs   clamp((value − from) × slope, 0, cap)  points.
    A `bonus` rule adds   clamp((value − from) × slope, 0, cap)  points.
-   A `flag` rule costs a flat `amount` when its condition is true.
-   Everything is clamped to 0–100 at the end.
+   A `flag` rule costs a flat `amount` when its condition holds — or when it
+   does *not*, if `invert` is set. Everything is clamped to 0–100.
+
+   `requires`  a terrain feature the mountain must have, or null for anywhere.
+   `window`    hours the activity is scored over when picking the best window.
+   `season`    snow-cover gate: below `snowMin` or above `snowMax` it is simply
+               out of season and says so rather than pretending otherwise.
 --------------------------------------------------------------------------- */
-export const SCORING = {
-  trail: {
-    base: 100,
+export const ACTIVITIES = [
+  {
+    id: 'trail', name: 'Trail running', short: 'Trail run', base: 100, window: 3,
+    requires: null, season: { snowMax: 0.45, over: 'too much snow underfoot' },
+    blurb: 'Moving fast in light kit, so wind chill and wet arrive quickly.',
     rules: [
       { kind: 'ramp', metric: 'precip', from: 0, slope: 16, cap: 42, label: 'precipitation', why: 'Wet rock and wet feet, and it only gets colder with height.' },
       { kind: 'ramp', metric: 'wind', from: 6, slope: 3.4, cap: 34, label: 'wind', why: 'Above about 6 m/s a headwind starts costing real pace on an exposed ridge.' },
@@ -147,13 +171,47 @@ export const SCORING = {
       { kind: 'ramp', metric: 'feels', from: 20, slope: 2.6, cap: 24, label: 'heat', why: 'Rare in the fjäll, punishing when it happens.' },
       { kind: 'ramp', metric: 'snowDepth', from: 0.25, slope: 60, cap: 26, label: 'deep snow underfoot', why: 'Modelled snow cover deep enough to wreck footing.' },
       { kind: 'flag', flag: 'summitInCloud', amount: 9, label: 'summit in cloud', why: 'No view, and navigation by feel.' },
-      { kind: 'flag', flag: 'night', amount: 13, label: 'darkness', why: 'Headlamp territory — outside sunrise/sunset for that day.' },
+      { kind: 'flag', flag: 'night', amount: 13, label: 'darkness', why: 'Headlamp territory — outside sunrise and sunset for that day.' },
       { kind: 'flag', flag: 'sleet', amount: 7, label: 'sleet', why: 'The single worst thing to be wet in.' },
       { kind: 'flag', flag: 'thunder', amount: 10, label: 'thunder risk', why: 'CAPE above 700 J/kg — get off the high ground.' },
     ],
   },
-  skimo: {
-    base: 74,
+  {
+    id: 'hike', name: 'Hiking', short: 'Hike', base: 100, window: 5,
+    requires: null, season: null,
+    blurb: 'Slower than running, so more hours exposed — but carrying layers for it.',
+    rules: [
+      { kind: 'ramp', metric: 'precip', from: 0, slope: 10, cap: 30, label: 'precipitation', why: 'You have a shell, but a whole day in it still grinds.' },
+      { kind: 'ramp', metric: 'wind', from: 8, slope: 2.6, cap: 28, label: 'wind', why: 'Walking pace into a headwind is survivable in a way that running is not.' },
+      { kind: 'ramp', metric: 'gust', from: 18, slope: 1.4, cap: 12, label: 'gusts', why: 'Enough to stagger you on a loaded pack.' },
+      { kind: 'ramp', metric: 'chill', from: 3, slope: 1.8, cap: 26, label: 'cold', reads: 'feels-like below −3 °C', why: 'Slow movement generates little heat; this is where hypothermia starts.' },
+      { kind: 'ramp', metric: 'feels', from: 24, slope: 2, cap: 16, label: 'heat', why: 'Little shade above the treeline.' },
+      { kind: 'ramp', metric: 'snowDepth', from: 0.3, slope: 45, cap: 24, label: 'deep snow', why: 'Post-holing turns five kilometres into a day.' },
+      { kind: 'flag', flag: 'summitInCloud', amount: 7, label: 'summit in cloud', why: 'The view was the point, and navigation gets serious.' },
+      { kind: 'flag', flag: 'night', amount: 10, label: 'darkness', why: 'Outside sunrise and sunset for that day.' },
+      { kind: 'flag', flag: 'thunder', amount: 14, label: 'thunder risk', why: 'You are slower than a storm, and there is nowhere to get to.' },
+    ],
+  },
+  {
+    id: 'thru', name: 'Hut to hut', short: 'Thru-hike', base: 100, window: 8,
+    requires: null, season: null,
+    blurb: 'Jämtlandstriangeln and the long routes — a whole day out, then a night in it.',
+    rules: [
+      { kind: 'ramp', metric: 'precip', from: 0, slope: 13, cap: 34, label: 'precipitation', why: 'Everything you own is wet by hut two, and it stays wet.' },
+      { kind: 'ramp', metric: 'rain24', from: 5, slope: 1.6, cap: 20, label: 'saturated ground', why: 'Yesterday\'s rain is today\'s bog and tomorrow\'s river crossing.' },
+      { kind: 'ramp', metric: 'wind', from: 9, slope: 2.4, cap: 26, label: 'wind', why: 'Hours of it, with a pack, across open fjäll.' },
+      { kind: 'ramp', metric: 'chill', from: 5, slope: 1.6, cap: 24, label: 'cold', reads: 'feels-like below −5 °C', why: 'A full day of it, and the night after.' },
+      { kind: 'ramp', metric: 'feels', from: 25, slope: 1.8, cap: 12, label: 'heat', why: 'Water between huts becomes the planning problem.' },
+      { kind: 'ramp', metric: 'snowDepth', from: 0.25, slope: 40, cap: 22, label: 'deep snow', why: 'Summer routes under snow are a different trip entirely.' },
+      { kind: 'flag', flag: 'summitInCloud', amount: 8, label: 'cloud on the tops', why: 'Route-finding between cairns you cannot see.' },
+      { kind: 'flag', flag: 'thunder', amount: 12, label: 'thunder risk', why: 'Long exposed traverses with no shelter for hours.' },
+      { kind: 'flag', flag: 'night', amount: 8, label: 'darkness', why: 'Walking a stage in the dark is a choice, rarely a good one.' },
+    ],
+  },
+  {
+    id: 'skimo', name: 'Ski mountaineering', short: 'Ski tour', base: 74, window: 4,
+    requires: null, season: { snowMin: 0.05, under: 'no snow cover' },
+    blurb: 'Earning the turns. Wind loading matters as much as the weather does.',
     rules: [
       { kind: 'ramp', metric: 'coverDeficit', from: 0, slope: 90, cap: 28, label: 'thin cover', reads: 'snow depth below 0.30 m', why: 'Below 30 cm the rocks are still in play.' },
       { kind: 'bonus', metric: 'coverSurplus', from: 0, slope: 22, cap: 14, label: 'good base', reads: 'snow depth above 0.30 m', why: 'A deep base covers the sharks.' },
@@ -161,17 +219,90 @@ export const SCORING = {
       { kind: 'ramp', metric: 'wind', from: 8, slope: 3.1, cap: 36, label: 'wind', why: 'Skinning into 15 m/s on a plateau is its own kind of misery.' },
       { kind: 'ramp', metric: 'gust', from: 18, slope: 1.5, cap: 14, label: 'gusts', why: 'Gusts on a corniced ridge are a safety problem, not a comfort one.' },
       { kind: 'ramp', metric: 'rain', from: 0, slope: 18, cap: 38, label: 'rain on snow', why: 'Ruins the surface and soaks the pack.' },
-      { kind: 'ramp', metric: 'chill', from: 20, slope: 1.6, cap: 18, label: 'severe cold', reads: 'feels-like below −20 °C', why: 'Below −20 °C felt, exposed skin has minutes.' },
+      { kind: 'ramp', metric: 'chill', from: 20, slope: 1.6, cap: 18, label: 'severe cold', reads: 'feels-like below −20 °C', why: 'Exposed skin has minutes.' },
       { kind: 'ramp', metric: 'temp', from: 3, slope: 5, cap: 16, label: 'warm, wet snow', why: 'Isothermal mush, and a wet-loose problem in steep terrain.' },
-      { kind: 'ramp', metric: 'drift', from: 45, slope: 0.35, cap: 18, label: 'wind slab building', why: 'Meteorological wind loading — see the avalanche warning below.' },
+      { kind: 'ramp', metric: 'drift', from: 45, slope: 0.35, cap: 18, label: 'wind slab building', why: 'Meteorological wind loading — see the avalanche warning.' },
       { kind: 'flag', flag: 'summitInCloud', amount: 15, label: 'flat light, no visibility', why: 'You cannot read terrain you cannot see.' },
       { kind: 'flag', flag: 'overcastOnly', amount: 7, label: 'flat light', why: 'Cloud above the summit still kills the contrast.' },
-      { kind: 'flag', flag: 'night', amount: 12, label: 'darkness', why: 'Outside sunrise/sunset for that day.' },
+      { kind: 'flag', flag: 'night', amount: 12, label: 'darkness', why: 'Outside sunrise and sunset for that day.' },
     ],
   },
-  /** Bands used for the verdict word attached to a score. */
+  {
+    id: 'alpine', name: 'Alpine skiing', short: 'Piste', base: 78, window: 5,
+    requires: 'lift', season: { snowMin: 0.08, under: 'no snow cover' },
+    blurb: 'Lift-served. The thing that ends the day here is wind, not cold.',
+    rules: [
+      { kind: 'bonus', metric: 'newSnow24', from: 0, slope: 1.4, cap: 16, label: 'fresh snow', why: 'A powder morning is why you booked the week.' },
+      { kind: 'bonus', metric: 'coverSurplus', from: 0, slope: 18, cap: 12, label: 'deep base', why: 'Everything open, nothing showing through.' },
+      { kind: 'ramp', metric: 'wind', from: 12, slope: 3.6, cap: 40, label: 'wind — lift holds', why: 'The top lifts on Åreskutan stop in a strong westerly long before the skiing gets bad.' },
+      { kind: 'ramp', metric: 'gust', from: 20, slope: 2.2, cap: 20, label: 'gusts', why: 'Gusts are what actually put a chairlift on hold.' },
+      { kind: 'ramp', metric: 'rain', from: 0, slope: 20, cap: 40, label: 'rain', why: 'Rain on piste is the worst day of the season.' },
+      { kind: 'ramp', metric: 'chill', from: 18, slope: 1.5, cap: 16, label: 'severe cold', reads: 'feels-like below −18 °C', why: 'Twelve minutes on an exposed chair changes your plans.' },
+      { kind: 'ramp', metric: 'temp', from: 4, slope: 4, cap: 14, label: 'slush', why: 'Spring snow goes from perfect to unskiable in an hour.' },
+      { kind: 'flag', flag: 'summitInCloud', amount: 16, label: 'flat light', why: 'Above the treeline in cloud you cannot see the terrain at all.' },
+      { kind: 'flag', flag: 'overcastOnly', amount: 6, label: 'dull light', why: 'Contrast still suffers under thick cloud.' },
+      { kind: 'flag', flag: 'night', amount: 26, label: 'lifts closed', why: 'Outside daylight, with only limited evening skiing.' },
+    ],
+  },
+  {
+    id: 'bike', name: 'Downhill biking', short: 'Bike park', base: 92, window: 4,
+    requires: 'lift', season: { snowMax: 0.05, over: 'snow on the trails' },
+    blurb: 'Åre Bike Park. Grip, sight lines, and how cold 60 km/h is.',
+    rules: [
+      { kind: 'ramp', metric: 'precip', from: 0, slope: 14, cap: 34, label: 'rain', why: 'Wet roots and off-camber rock are where the season ends for people.' },
+      { kind: 'ramp', metric: 'rain24', from: 4, slope: 2, cap: 22, label: 'soaked trails', why: 'Yesterday\'s rain means ruts, and riding it wrecks the trail for everyone.' },
+      { kind: 'ramp', metric: 'wind', from: 10, slope: 2.4, cap: 22, label: 'wind', why: 'Crosswind on the exposed upper sections, and the lift stops before you do.' },
+      { kind: 'ramp', metric: 'gust', from: 18, slope: 1.6, cap: 14, label: 'gusts', why: 'A gust while you are in the air is a genuinely bad time.' },
+      { kind: 'ramp', metric: 'chill', from: -2, slope: 2.2, cap: 26, label: 'wind chill', reads: 'feels-like below +2 °C', why: 'You are doing 60 km/h downhill and generating no heat at all.' },
+      { kind: 'ramp', metric: 'feels', from: 26, slope: 1.6, cap: 10, label: 'heat', why: 'Full-face helmet and body armour in the sun.' },
+      { kind: 'flag', flag: 'freezing', amount: 12, label: 'frozen ground', why: 'Frozen ruts and ice in the shade, on tyres meant for dirt.' },
+      { kind: 'flag', flag: 'summitInCloud', amount: 10, label: 'fog on the trail', why: 'Blind corners at speed.' },
+      { kind: 'flag', flag: 'thunder', amount: 16, label: 'thunder risk', why: 'A chairlift is the worst place on the mountain in a storm.' },
+      { kind: 'flag', flag: 'night', amount: 38, label: 'park closed', why: 'Outside daylight hours.' },
+    ],
+  },
+  {
+    id: 'kite', name: 'Snowkiting', short: 'Snowkite', base: 46, window: 4,
+    requires: 'plateau', season: { snowMin: 0.15, under: 'not enough snow to kite on' },
+    blurb: 'The one sport here that wants the wind the others are hiding from.',
+    rules: [
+      { kind: 'bonus', metric: 'wind', from: 5, slope: 3.4, cap: 36, label: 'usable wind', why: 'Below about 5 m/s the kite will not fly. This is the only score on the site that rewards a gale.' },
+      { kind: 'ramp', metric: 'wind', from: 18, slope: 4, cap: 42, label: 'overpowered', why: 'Past 18 m/s you are a passenger, and the fjäll is not a forgiving place to be dragged across.' },
+      { kind: 'ramp', metric: 'gustSpread', from: 5, slope: 3, cap: 22, label: 'gusty', why: 'The gap between lull and gust is what breaks lines and shoulders — steady wind beats strong wind.' },
+      { kind: 'bonus', metric: 'coverSurplus', from: 0, slope: 14, cap: 10, label: 'good cover', why: 'Deep snow means the rocks and heather are gone.' },
+      { kind: 'ramp', metric: 'precip', from: 0, slope: 10, cap: 22, label: 'precipitation', why: 'Wet lines, and visibility you need for speed.' },
+      { kind: 'ramp', metric: 'chill', from: 15, slope: 1.4, cap: 16, label: 'severe cold', reads: 'feels-like below −15 °C', why: 'Standing still rigging in a headwind is the coldest part of the day.' },
+      { kind: 'flag', flag: 'summitInCloud', amount: 14, label: 'whiteout', why: 'Speed plus no horizon is how people hit things.' },
+      { kind: 'flag', flag: 'night', amount: 30, label: 'darkness', why: 'Outside daylight hours.' },
+    ],
+  },
+  {
+    id: 'aurora', name: 'Aurora watching', short: 'Aurora', base: 90, window: 3,
+    requires: null, season: null,
+    night: true,
+    blurb: 'Scores the sky, not the sun — clear, dark and moonless. Geomagnetic activity is not modelled.',
+    rules: [
+      { kind: 'flag', flag: 'night', invert: true, amount: 70, label: 'daylight', why: 'The obvious one, and the reason this is out of the running for half the summer.' },
+      { kind: 'ramp', metric: 'cloud', from: 20, slope: 0.7, cap: 45, label: 'cloud cover', why: 'The best display in a decade is invisible under stratus.' },
+      { kind: 'ramp', metric: 'moon', from: 0.4, slope: 40, cap: 22, label: 'moonlight', why: 'A gibbous moon washes out everything but the strongest arcs.' },
+      { kind: 'ramp', metric: 'precip', from: 0, slope: 20, cap: 30, label: 'precipitation', why: 'If it is falling on you, you are not seeing anything.' },
+      { kind: 'ramp', metric: 'chill', from: 10, slope: 1.2, cap: 18, label: 'cold', reads: 'feels-like below −10 °C', why: 'Standing still for an hour, which is the whole activity.' },
+      { kind: 'ramp', metric: 'wind', from: 10, slope: 1.8, cap: 16, label: 'wind', why: 'Camera shake, and no reason to be on an exposed summit for it.' },
+      { kind: 'flag', flag: 'summitInCloud', amount: 25, label: 'in cloud', why: 'Inside the cloud rather than under it.' },
+    ],
+  },
+];
+
+/** Verdict words attached to a score. */
+export const SCORING = {
   labels: [[80, 'Excellent'], [65, 'Good'], [50, 'Workable'], [32, 'Marginal'], [0, 'Poor']],
 };
+
+export const activityById = (id) => ACTIVITIES.find((a) => a.id === id) ?? ACTIVITIES[0];
+/** Activities that make sense on a given peak. */
+export const activitiesFor = (mtn) => ACTIVITIES.filter(
+  (a) => !a.requires || (mtn.features ?? []).includes(a.requires),
+);
 
 /* ---------------------------------------------------------------------------
    Provenance. Every upstream source, its licence, and the credit it asks for.

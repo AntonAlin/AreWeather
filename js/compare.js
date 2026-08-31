@@ -9,7 +9,7 @@
    the same 30-minute cache as the detail view. Opening a peak afterwards costs
    nothing extra. */
 
-import { APP, MOUNTAINS } from './config.js';
+import { APP, MOUNTAINS, ACTIVITIES, activityById, activitiesFor } from './config.js';
 import { fetchSurface, fetchAux } from './api.js';
 import { assemble, dailySummaries } from './forecast.js';
 import { setStatus } from './ui.js';
@@ -26,7 +26,7 @@ const state = {
   cachedAt: null,
 };
 
-const ACTIVITY_NAME = { trail: 'trail running', skimo: 'ski mountaineering' };
+const activityName = (id) => activityById(id).name.toLowerCase();
 
 /* ---------- loading ---------- */
 
@@ -73,7 +73,10 @@ async function loadRow(row, { force = false } = {}) {
 
 function summarise(row) {
   if (!row.model) { row.days = null; return; }
-  row.days = dailySummaries(row.model, state.activity, { fromIndex: row.nowIndex }).slice(0, HORIZON);
+  row.applicable = activitiesFor(row.mtn).some((a) => a.id === state.activity);
+  row.days = row.applicable
+    ? dailySummaries(row.model, state.activity, { fromIndex: row.nowIndex }).slice(0, HORIZON)
+    : [];
 }
 
 async function loadAll({ force = false } = {}) {
@@ -105,6 +108,7 @@ function dateColumns() {
 }
 
 const rank = (row) => (row.days?.length ? Math.max(...row.days.map((d) => d.best.score)) : -1);
+const notHere = (row) => !row.loading && !row.error && row.applicable === false;
 
 function sortedRows() {
   const rows = [...state.rows];
@@ -157,6 +161,11 @@ function renderGrid() {
       el('i', {}, wrap);
       continue;
     }
+    if (notHere(row)) {
+      const td = el('td', { colspan: Math.max(1, columns.length) }, tr);
+      el('div', { class: 'row-na', text: `${activityById(state.activity).name} is not a thing on this peak — no lift, or the wrong terrain for it` }, td);
+      continue;
+    }
     if (row.error || !row.days) {
       const td = el('td', { colspan: Math.max(1, columns.length) }, tr);
       el('div', { class: 'row-error', text: `no data — ${row.error ?? 'unavailable'}` }, td);
@@ -169,7 +178,7 @@ function renderGrid() {
       if (!day) { el('div', { class: 'cell empty', text: '–' }, td); continue; }
       const cell = el('a', {
         class: 'cell', href: `./#${row.mtn.id}`,
-        'aria-label': `${row.mtn.name}, ${fmtShortDay(day.time)}: score ${Math.round(day.best.score)} for ${ACTIVITY_NAME[state.activity]}, best window ${fmtClock(day.best.startTime)} to ${fmtClock(day.best.endTime)}${day.best.dark ? ', after dark' : ''}`,
+        'aria-label': `${row.mtn.name}, ${fmtShortDay(day.time)}: score ${Math.round(day.best.score)} for ${activityName(state.activity)}, best window ${fmtClock(day.best.startTime)} to ${fmtClock(day.best.endTime)}${day.best.dark ? ', after dark' : ''}`,
       }, td);
       Object.assign(cell.style, cellTone(day.best.score));
       el('span', { class: 's', text: Math.round(day.best.score) }, cell);
@@ -195,7 +204,8 @@ function renderLegend() {
     const i = el('i', { title: String(s) }, sw);
     i.style.background = scoreColor(s);
   }
-  el('span', { class: 'muted', text: 'poor → excellent · times are the best three-hour daylight window that day' }, node);
+  const activity = activityById(state.activity);
+  el('span', { class: 'muted', text: `poor → excellent · times are the best ${activity.window}-hour ${activity.night ? 'window after dark' : 'daylight window'} that day` }, node);
   const dark = el('span', { class: 'key' }, node);
   const marker = el('i', { text: '00–00' }, dark);
   marker.style.cssText = 'font-family:var(--mono);font-size:.62rem;color:var(--amber);background:none;width:auto;height:auto';
@@ -228,12 +238,25 @@ function renderPicks() {
   }
 
   const top = picks[0].day.best.score;
-  $('#picks-title').textContent = top >= 65 ? 'Where to go' : top >= 45 ? 'The least bad options' : 'It is that kind of week';
-  $('#picks-sub').textContent = top >= 65
-    ? `Best windows for ${ACTIVITY_NAME[state.activity]} in the next seven days.`
-    : top >= 45
-      ? `Nothing scores well for ${ACTIVITY_NAME[state.activity]} this week. These are the best of it.`
-      : `Nothing in the next seven days scores above ${Math.round(top)} for ${ACTIVITY_NAME[state.activity]}. Sometimes the honest answer is to stay in the valley.`;
+  const activity = activityById(state.activity);
+  // Out of season is a different answer from a bad week, and saying so is the
+  // difference between a useful forecast and a wall of low numbers.
+  const outOfSeason = candidates.length
+    && candidates.filter((c) => c.day.best.label === 'Out of season').length > candidates.length * 0.7;
+
+  if (outOfSeason) {
+    $('#picks-title').textContent = `${activity.name} is out of season`;
+    $('#picks-sub').textContent = activity.season?.snowMin
+      ? `There is not enough snow for ${activityName(state.activity)} on these peaks, and none of the next seven days changes that. The grid below shows where it is closest.`
+      : `There is too much snow for ${activityName(state.activity)} right now. The grid below shows where it is closest.`;
+  } else {
+    $('#picks-title').textContent = top >= 65 ? 'Where to go' : top >= 45 ? 'The least bad options' : 'It is that kind of week';
+    $('#picks-sub').textContent = top >= 65
+      ? `Best windows for ${activityName(state.activity)} in the next seven days.`
+      : top >= 45
+        ? `Nothing scores well for ${activityName(state.activity)} this week. These are the best of it.`
+        : `Nothing in the next seven days scores above ${Math.round(top)} for ${activityName(state.activity)}. Sometimes the honest answer is to stay in the valley.`;
+  }
 
   picks.forEach((p, i) => {
     const tone = scoreColor(p.day.best.score);
@@ -282,7 +305,21 @@ function press(group, active) {
   }
 }
 
-$$('#activity button').forEach((b) => b.addEventListener('click', () => {
+function buildActivityPicker() {
+  const rail = $('#activity');
+  rail.textContent = '';
+  for (const a of ACTIVITIES) {
+    const b = el('button', {
+      type: 'button', text: a.short, title: a.blurb,
+      'data-activity': a.id,
+      class: a.id === state.activity ? 'on' : '',
+      'aria-pressed': a.id === state.activity ? 'true' : 'false',
+    }, rail);
+    b.addEventListener('click', () => selectActivity(b));
+  }
+}
+
+function selectActivity(b) {
   press($$('#activity button'), b);
   state.activity = b.dataset.activity;
   store.set(`${NS}.activity`, state.activity);
@@ -290,7 +327,7 @@ $$('#activity button').forEach((b) => b.addEventListener('click', () => {
   for (const row of state.rows) summarise(row);
   renderGrid();
   renderPicks();
-}));
+}
 
 $$('#sort button').forEach((b) => b.addEventListener('click', () => {
   press($$('#sort button'), b);
@@ -304,7 +341,7 @@ setInterval(() => {
   if (state.cachedAt && !state.rows.some((r) => r.loading)) setStatus(navigator.onLine ? 'live' : 'stale', `${navigator.onLine ? 'Live' : 'Offline'} · ${ago(state.cachedAt)}`);
 }, 60e3);
 
-press($$('#activity button'), $$('#activity button').find((b) => b.dataset.activity === state.activity));
+buildActivityPicker();
 loadAll();
 
 if ('serviceWorker' in navigator) {

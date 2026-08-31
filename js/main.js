@@ -19,6 +19,7 @@ const tip = tooltip();
 const state = {
   mountainId: null,
   unit: store.get(`${NS}.unit`) ?? 'ms',
+  activity: store.get(`${NS}.activity`) ?? 'trail',
   metric: 'temp',
   hours: 48,
   selected: 0,
@@ -72,6 +73,8 @@ async function load(id, { force = false } = {}) {
     ml,
   });
   state.nowIndex = Math.max(0, state.model.hours.findIndex((h) => h.iso.slice(0, 13) === nowIsoHour(APP.timezone)));
+  // Fall back if the remembered activity does not exist on this peak.
+  if (!state.model.activities.some((a) => a.id === state.activity)) state.activity = state.model.activities[0].id;
   state.selected = state.nowIndex;
   state.bandZ = mtn.summit;
   renderAll();
@@ -158,6 +161,12 @@ async function trainInBackground(mtn) {
 }
 
 /* ---------- rendering ---------- */
+state.onActivity = (id) => {
+  state.activity = id;
+  store.set(`${NS}.activity`, id);
+  renderHero($('#hero'), state.model, state);
+};
+
 function renderAll() {
   const m = state.model;
   if (!m) return;

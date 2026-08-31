@@ -74,43 +74,64 @@ export function renderHero(node, model, state) {
 
   el('p', { class: 'hero-summary', html: summaryLine(model, h, unit) }, main);
 
-  /* verdicts */
+  /* the activity board */
   const side = el('div', { class: 'hero-side' }, grid);
-  verdictCard(side, 'Trail running', h.trail, model, 'trail', state);
-  verdictCard(side, 'Ski mountaineering', h.skimo, model, 'skimo', state);
+  renderActivityBoard(side, model, state, h);
 }
 
-function verdictCard(parent, name, v, model, key, state) {
-  const c = el('div', { class: 'verdict' }, parent);
-  const top = el('div', { class: 'verdict-top' }, c);
-  el('div', { class: 'verdict-name', text: name }, top);
-  const score = el('div', { class: 'verdict-score num', text: v.score }, top);
-  score.style.color = scoreColor(v.score);
-  const bar = el('div', { class: 'verdict-bar' }, c);
-  const fill = el('i', {}, bar);
-  fill.style.width = `${v.score}%`;
-  fill.style.background = scoreColor(v.score);
-  const t = el('div', { class: 'verdict-text' }, c);
-  t.innerHTML = `<b>${v.label}</b>${v.why.length ? ` — limited by ${v.why.join(', ')}` : ' — nothing holding you back'}`;
+/**
+ * Every activity this peak supports, ranked by how good it is right now.
+ * Ranking rather than a fixed order is the point: the question is "what is this
+ * mountain good for today", and in November that answer changes weekly.
+ */
+function renderActivityBoard(side, model, state, h) {
+  const acts = model.activities;
+  const head = el('div', { class: 'act-head' }, side);
+  el('span', { text: 'Conditions for' }, head);
+  el('span', { class: 'muted', text: `${acts.length} activities` }, head);
 
-  const win = bestWindow(model.hours.slice(state.nowIndex), key, { len: 4, within: 48 });
-  if (win) {
-    const strip = el('div', { class: 'window-strip' }, c);
-    const pool = model.hours.slice(state.nowIndex, state.nowIndex + 48);
-    const stepN = Math.max(1, Math.round(pool.length / 24));
-    for (let i = 0; i < pool.length; i += stepN) {
-      const chunk = pool.slice(i, i + stepN);
-      const avg = chunk.reduce((a, x) => a + x[key].score, 0) / chunk.length;
-      const cell = el('i', {}, strip);
-      const inner = el('span', {}, cell);
-      inner.style.background = scoreColor(avg);
-      inner.style.opacity = chunk[0].daylight ? '.95' : '.35';
-      cell.title = `${chunk[0].time.getHours()}:00 — score ${Math.round(avg)}${chunk[0].daylight ? '' : ' (dark)'}`;
-    }
-    const lg = el('div', { class: 'window-legend' }, c);
-    el('span', { text: 'next 48 h' }, lg);
-    el('span', { text: `best window ${fmtClock(win.start)}–${fmtClock(win.end)} ${win.start.toDateString().slice(0, 3)} · ${Math.round(win.score)}` }, lg);
+  const ranked = [...acts].sort((a, b) => h.scores[b.id].score - h.scores[a.id].score);
+  const board = el('div', { class: 'act-board' }, side);
+
+  for (const activity of ranked) {
+    const v = h.scores[activity.id];
+    const focused = activity.id === state.activity;
+    const row = el('button', {
+      type: 'button', class: `act-row${focused ? ' on' : ''}`,
+      'aria-pressed': focused ? 'true' : 'false',
+      title: activity.blurb,
+    }, board);
+    const top = el('div', { class: 'act-top' }, row);
+    el('span', { class: 'act-name', text: activity.name }, top);
+    const score = el('span', { class: 'act-score num', text: v.score }, top);
+    score.style.color = scoreColor(v.score);
+    const bar = el('div', { class: 'act-bar' }, row);
+    const fill = el('i', {}, bar);
+    fill.style.width = `${Math.max(2, v.score)}%`;
+    fill.style.background = scoreColor(v.score);
+    el('div', { class: 'act-why', text: v.why.length ? `${v.label} — ${v.why.join(', ')}` : v.label }, row);
+    row.addEventListener('click', () => state.onActivity?.(activity.id));
   }
+
+  /* The focused activity gets the next 48 hours and its best window. */
+  const activity = acts.find((a) => a.id === state.activity) ?? ranked[0];
+  const detail = el('div', { class: 'act-detail' }, side);
+  const win = bestWindow(model.hours.slice(state.nowIndex), activity.id, { within: 48 });
+  const strip = el('div', { class: 'window-strip' }, detail);
+  const pool = model.hours.slice(state.nowIndex, state.nowIndex + 48);
+  const stepN = Math.max(1, Math.round(pool.length / 24));
+  for (let i = 0; i < pool.length; i += stepN) {
+    const chunk = pool.slice(i, i + stepN);
+    const avg = chunk.reduce((a, x) => a + x.scores[activity.id].score, 0) / chunk.length;
+    const cell = el('i', {}, strip);
+    const inner = el('span', {}, cell);
+    inner.style.background = scoreColor(avg);
+    inner.style.opacity = chunk[0].daylight ? '.95' : '.4';
+    cell.title = `${chunk[0].time.getHours()}:00 — ${activity.short} ${Math.round(avg)}${chunk[0].daylight ? '' : ' (dark)'}`;
+  }
+  const legend = el('div', { class: 'window-legend' }, detail);
+  el('span', { text: `${activity.short} · next 48 h` }, legend);
+  el('span', { text: win ? `best ${fmtClock(win.start)}–${fmtClock(win.end)} ${win.start.toDateString().slice(0, 3)} · ${Math.round(win.score)}` : '' }, legend);
 }
 
 function summaryLine(model, h, unit) {

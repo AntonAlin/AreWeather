@@ -260,3 +260,18 @@ export function driftIndex(newSnowCm, windMs, tempC) {
   const transport = clamp((windMs - PHYS.driftThreshold) / 9, 0, 1) ** 0.8;
   return Math.round(100 * available * cold * transport);
 }
+
+/**
+ * Moon illumination, 0 (new) to 1 (full).
+ *
+ * A mean-synodic approximation from a known new moon — good to a few percent,
+ * which is ample for deciding whether moonlight will wash out an aurora. It
+ * ignores the elliptical orbit, so do not navigate by it.
+ */
+export function moonIllumination(date) {
+  const SYNODIC = 29.530588853;
+  const REFERENCE_NEW_MOON = Date.UTC(2000, 0, 6, 18, 14);
+  const days = (date.getTime() - REFERENCE_NEW_MOON) / 864e5;
+  const cyclePosition = (((days % SYNODIC) + SYNODIC) % SYNODIC) / SYNODIC;
+  return (1 - Math.cos(2 * Math.PI * cyclePosition)) / 2;
+}
