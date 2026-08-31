@@ -245,3 +245,30 @@ export const SOURCES = {
     { name: 'JetBrains Mono', author: 'JetBrains', licence: 'SIL Open Font License 1.1', url: 'https://www.jetbrains.com/lp/mono/', file: 'fonts/LICENSE-JetBrainsMono.txt' },
   ],
 };
+
+/* ---------------------------------------------------------------------------
+   Contact.
+
+   The address is not in this file, in the HTML, or anywhere else a crawler can
+   read it — only a ciphertext is. The AES-GCM key is derived from the answer to
+   the question below, so answering correctly is what produces the address; a
+   wrong answer fails the authentication tag and decrypts to nothing.
+
+   To be clear about what this does and does not do: it stops the bulk address
+   harvesters that crawl static sites, which is the entire threat here. It would
+   not stop somebody determined who simply reads the question and answers it.
+--------------------------------------------------------------------------- */
+export const CONTACT = {
+  question: 'How many metres above sea level is the summit of Åreskutan?',
+  hint: 'The number is on the mountain selector at the top of the forecast page.',
+  placeholder: 'metres',
+  subject: 'ÅreWeather',
+  issues: 'https://github.com/AntonAlin/AreWeather/issues',
+  repo: 'https://github.com/AntonAlin/AreWeather',
+  sealed: {
+    salt: 'ycl9IgJBCb3If9JLIMA6Zw==',
+    iv: 'nvLparx/AQfr9em+',
+    ct: 'NXlxnN55NwkAKLlKaGT9o0oaNZNAmJJAKqtYXFF3DOceLn22',
+    iterations: 310000,
+  },
+};

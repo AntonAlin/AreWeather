@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<a class="skip-link" href="#sources">Skip to the content</a>
 <div class="aurora" aria-hidden="true"><span class="a1"></span><span class="a2"></span><span class="a3"></span></div>
 <div class="grain" aria-hidden="true"></div>
 
@@ -416,6 +417,55 @@ band at elevation <em>z</em> = quantile + [ <em>T</em>(<em>z</em>) − <em>T</em
         <p style="margin-top:14px">The source is public: every formula on this page is in
           <code>js/physics.js</code>, <code>js/ml.js</code> and <code>js/forecast.js</code>, and
           <code>tools/selftest.mjs</code> checks them against known cases offline.</p>
+      </section>
+
+
+      <section class="card" id="contact">
+        <h2>11 · Contact</h2>
+        <p>Wrong forecast, broken chart, a peak that should be on the list, or an exposure factor
+          you think is nonsense — all of it is welcome. There are two ways to reach me.</p>
+
+        <h3>Bugs and suggestions — the better channel</h3>
+        <p>The source is public, so an issue is easier to act on than an email: it keeps the
+          discussion attached to the code and anyone else hitting the same thing can find it.</p>
+        <p><a class="nav-link" id="issues-link" href="#" target="_blank" rel="noopener">Open an issue on GitHub →</a></p>
+
+        <h3>Email</h3>
+        <p>The address is not written anywhere in this page's source — only a ciphertext is. The key
+          is derived from the answer below, so answering is what produces the address. It costs you
+          five seconds and costs an address-harvesting crawler more than it is willing to spend.</p>
+        <form class="gate" id="gate" autocomplete="off">
+          <label class="gate-q" for="gate-answer" id="gate-question"></label>
+          <div class="gate-row">
+            <input type="text" id="gate-answer" inputmode="numeric" autocomplete="off" spellcheck="false">
+            <button type="submit" id="gate-submit">Unlock</button>
+          </div>
+          <p class="gate-msg" id="gate-msg" role="status" aria-live="polite"></p>
+        </form>
+        <div class="revealed" id="revealed" hidden>
+          <div class="revealed-row">
+            <a class="revealed-mail num" id="revealed-mail" href="#"></a>
+            <button type="button" class="copy-btn" id="copy-mail">Copy</button>
+          </div>
+          <p class="ml-note" style="margin-top:10px">Proton Mail, so it is end-to-end encrypted if you
+            write from Proton too. I answer when I am not on a mountain, which in winter can take a
+            few days.</p>
+        </div>
+
+        <h3>If you are reporting a forecast that was wrong</h3>
+        <p>This is the useful kind of bug report, and the hardest to act on without detail. Include:</p>
+        <ul>
+          <li><b>Which mountain, and the exact hour</b> — the forecast changes every hour and I cannot
+            reconstruct what you saw without it.</li>
+          <li><b>What the app said and what actually happened</b> — "it said −4 °C and 8 m/s at the
+            summit at 09:00, it was more like −12 °C and blowing hard".</li>
+          <li><b>Roughly when you loaded it</b>, since a forecast made three days out is a different
+            claim from one made that morning.</li>
+          <li>Whether the <b>learning log</b> said the correction was active or disabled.</li>
+        </ul>
+        <p>Systematic errors are the interesting ones. If a peak is always too warm, or the wind is
+          always understated on one particular ridge, that is a fixable bug in the exposure factor or
+          the downscaling — not just weather being weather.</p>
       </section>
 
       <footer class="footer">

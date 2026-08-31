@@ -2,7 +2,7 @@
    on. Nothing here is a transcription of the code — if a constant changes, this
    page changes with it, which is the only way documentation stays true. */
 
-import { APP, PHYS, PRESSURE_LEVELS, MOUNTAINS, MODELS, SCORING, SOURCES } from './config.js';
+import { APP, PHYS, PRESSURE_LEVELS, MOUNTAINS, MODELS, SCORING, SOURCES, CONTACT } from './config.js';
 import { TEMP_FEATURES } from './ml.js';
 import { snowRatio } from './physics.js';
 import { $, $$, el, round } from './util.js';
@@ -181,6 +181,74 @@ table('#mountains-table',
     `<span class="num">${m.exposure.toFixed(2)}×</span>`,
     `<span class="num">${m.lat.toFixed(4)}°N ${m.lon.toFixed(4)}°E</span>`,
   ]));
+
+/* ---------- contact, behind the answer to a question ----------
+   The address is never in the source. The AES-GCM key is derived from what the
+   visitor types, so a wrong answer fails the authentication tag and yields
+   nothing at all — there is no comparison to bypass. */
+
+$('#issues-link').href = CONTACT.issues;
+$('#gate-question').innerHTML = `${CONTACT.question}<small>${CONTACT.hint}</small>`;
+$('#gate-answer').placeholder = CONTACT.placeholder;
+
+const b64ToBytes = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+const normalise = (s2) => s2.toLowerCase().replace(/[^a-z0-9åäö]/g, '');
+const digitsOnly = (s2) => s2.replace(/[^0-9]/g, '');
+
+async function unseal(answer) {
+  const sealed = CONTACT.sealed;
+  const salt = b64ToBytes(sealed.salt);
+  const iv = b64ToBytes(sealed.iv);
+  const ct = b64ToBytes(sealed.ct);
+  // "1420", "1420 m" and "1420m" should all work; try the sensible readings.
+  const candidates = [...new Set([normalise(answer), digitsOnly(answer)].filter(Boolean))];
+  for (const candidate of candidates) {
+    try {
+      const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(candidate), 'PBKDF2', false, ['deriveKey']);
+      const key = await crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt, iterations: sealed.iterations, hash: 'SHA-256' },
+        base, { name: 'AES-GCM', length: 256 }, false, ['decrypt'],
+      );
+      const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
+      return new TextDecoder().decode(plain);
+    } catch { /* wrong answer for this reading; try the next */ }
+  }
+  return null;
+}
+
+const gate = $('#gate');
+const msg = $('#gate-msg');
+gate.addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const value = $('#gate-answer').value.trim();
+  if (!value) return;
+  const button = $('#gate-submit');
+  button.disabled = true;
+  msg.className = 'gate-msg';
+  msg.textContent = 'Deriving key…';
+  const address = await unseal(value);
+  button.disabled = false;
+  if (!address) {
+    msg.className = 'gate-msg bad';
+    msg.textContent = 'That is not it. The number is on the Åreskutan chip at the top of the forecast page.';
+    return;
+  }
+  msg.className = 'gate-msg good';
+  msg.textContent = 'Decrypted.';
+  const link = $('#revealed-mail');
+  link.textContent = address;
+  link.href = `mailto:${address}?subject=${encodeURIComponent(CONTACT.subject)}`;
+  $('#revealed').hidden = false;
+  $('#copy-mail').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(address);
+      $('#copy-mail').textContent = 'Copied';
+      setTimeout(() => { $('#copy-mail').textContent = 'Copy'; }, 1800);
+    } catch {
+      $('#copy-mail').textContent = 'Select it manually';
+    }
+  }, { once: true });
+});
 
 /* ---------- contents and scroll spy ---------- */
 const sections = $$('.doc > section[id]');

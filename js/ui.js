@@ -9,11 +9,23 @@ import { MOUNTAINS } from './config.js';
 export function renderRail(node, activeId, onPick) {
   node.textContent = '';
   for (const m of MOUNTAINS) {
-    const b = el('button', { class: `mtn-chip${m.id === activeId ? ' on' : ''}`, type: 'button' }, node);
+    const b = el('button', {
+      class: `mtn-chip${m.id === activeId ? ' on' : ''}`, type: 'button',
+      'aria-pressed': m.id === activeId ? 'true' : 'false',
+      'aria-label': `${m.name}, ${m.summit} metres`,
+    }, node);
     el('span', { class: 'n', text: m.name }, b);
     el('span', { class: 'e', text: `${m.summit} m` }, b);
     b.addEventListener('click', () => onPick(m.id));
-    if (m.id === activeId) requestAnimationFrame(() => b.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' }));
+    if (m.id === activeId) {
+      // Scroll the rail itself rather than calling scrollIntoView on the button:
+      // scrollIntoView moves the browser's sequential-focus starting point onto
+      // that element, which makes the first Tab press skip the entire header.
+      requestAnimationFrame(() => {
+        const target = b.offsetLeft - (node.clientWidth - b.offsetWidth) / 2;
+        node.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
+      });
+    }
   }
 }
 
@@ -307,7 +319,12 @@ export function renderBandPicker(node, model, state, onPick) {
   node.textContent = '';
   const heights = [...model.bandHeights].reverse();
   for (const z of heights) {
-    const b = el('button', { type: 'button', class: z === state.bandZ ? 'on' : '', text: z === model.mtn.summit ? `${z} summit` : `${z}` }, node);
+    const b = el('button', {
+      type: 'button', class: z === state.bandZ ? 'on' : '',
+      'aria-pressed': z === state.bandZ ? 'true' : 'false',
+      'aria-label': `${z} metres${z === model.mtn.summit ? ', the summit' : ''}`,
+      text: z === model.mtn.summit ? `${z} summit` : `${z}`,
+    }, node);
     b.addEventListener('click', () => onPick(z));
   }
 }

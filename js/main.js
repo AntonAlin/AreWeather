@@ -216,21 +216,30 @@ function status() {
 }
 
 /* ---------- events ---------- */
+/** Segmented controls are toggle buttons; keep their state readable to assistive tech. */
+function press(group, active) {
+  for (const b of group) {
+    const on = b === active;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+}
+
 function wire() {
   $$('#matrix-metric button').forEach((b) => b.addEventListener('click', () => {
-    $$('#matrix-metric button').forEach((x) => x.classList.toggle('on', x === b));
+    press($$('#matrix-metric button'), b);
     state.metric = b.dataset.metric;
     renderLegend($('#matrix-legend'), state.metric, state.unit);
     drawCharts();
   }));
   $$('#matrix-range button').forEach((b) => b.addEventListener('click', () => {
-    $$('#matrix-range button').forEach((x) => x.classList.toggle('on', x === b));
+    press($$('#matrix-range button'), b);
     state.hours = +b.dataset.hours;
     state.selected = clamp(state.selected, 0, state.hours - 1);
     drawCharts();
   }));
   $$('#unit-toggle button').forEach((b) => b.addEventListener('click', () => {
-    $$('#unit-toggle button').forEach((x) => x.classList.toggle('on', x === b));
+    press($$('#unit-toggle button'), b);
     state.unit = b.dataset.unit;
     store.set(`${NS}.unit`, state.unit);
     renderAll();
@@ -265,7 +274,8 @@ function wire() {
 }
 
 /* ---------- go ---------- */
-$$('#unit-toggle button').forEach((b) => b.classList.toggle('on', b.dataset.unit === state.unit));
+press($$('#unit-toggle button'), $$('#unit-toggle button').find((b) => b.dataset.unit === state.unit));
+for (const group of ['#matrix-metric', '#matrix-range']) press($$(`${group} button`), $(`${group} button.on`));
 $('#build-line').textContent = `${APP.version} · ${MOUNTAINS.length} peaks · data cached in this browser`;
 wire();
 load(initialMountain());

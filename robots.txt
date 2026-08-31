@@ -1,0 +1,9 @@
+# ÅreWeather — a static, non-commercial mountain forecast for the Åre fjäll.
+# Indexing is welcome. The contact address is encrypted client-side and is not
+# present in any served file, so there is nothing here for an address harvester
+# to find in the first place.
+
+User-agent: *
+Allow: /
+
+Sitemap: https://antonalin.github.io/AreWeather/sitemap.xml

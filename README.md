@@ -159,6 +159,22 @@ if that date is old.
   indices only. For avalanche danger in the Swedish fjäll use
   [lavinprognoser.se](https://www.lavinprognoser.se); for official warnings, [SMHI](https://www.smhi.se).
 
+## Contact
+
+The email address is not present in any served file — only an AES-GCM ciphertext is, with the key
+derived (PBKDF2, 310 000 iterations) from the answer to a question on the
+[contact section](methods.html#contact) of the method page. A wrong answer fails the authentication
+tag and produces nothing; there is no comparison to bypass. It stops bulk address harvesters, which
+is the whole threat model — it would not stop a person who reads the question and answers it.
+
+To change the address or the question, re-seal it and replace `CONTACT.sealed` in `js/config.js`:
+
+```bash
+node tools/seal-contact.mjs 'you@example.com' '1420'
+```
+
+For bugs, [GitHub issues](https://github.com/AntonAlin/AreWeather/issues) is the better channel.
+
 ## Credits
 
 Weather data from [Open-Meteo](https://open-meteo.com) (CC BY 4.0), aggregating MET Norway, DMI,

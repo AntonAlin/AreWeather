@@ -7,12 +7,13 @@ const AXIS = '#66717f';
 const GRID = 'rgba(255,255,255,.10)';
 
 /* ---------- shared ---------- */
-function frame(container, width, height) {
+function frame(container, width, height, label) {
   container.textContent = '';
   const svg = svgEl('svg', {
     width, height, viewBox: `0 0 ${width} ${height}`,
-    style: 'max-width:100%;overflow:visible', role: 'img',
+    style: 'max-width:100%;overflow:visible', role: 'img', 'aria-label': label,
   }, container);
+  if (label) svgEl('title', {}, svg).appendChild(document.createTextNode(label));
   return svg;
 }
 const text = (parent, x, y, str, opts = {}) => svgEl('text', {
@@ -59,7 +60,9 @@ export function renderMatrix(container, model, opts) {
   const top = 40;
   const width = gutter + cols.length * cw + 8;
   const height = top + rows.length * ch + 22;
-  const svg = frame(container, width, height);
+  const metricName = { temp: 'temperature', feels: 'feels-like temperature', wind: 'wind speed', precip: 'precipitation' }[metric] ?? metric;
+  const svg = frame(container, width, height,
+    `${metricName} for ${rows.length} elevation bands from ${rows[rows.length - 1]} to ${rows[0]} metres over the next ${cols.length} hours`);
 
   const xOf = (i) => gutter + i * cw;
   const yOf = (z) => top + rows.indexOf(z) * ch;
@@ -186,7 +189,8 @@ export function renderProfile(container, model, hourIndex, { unit = 'ms', width 
   if (!h) return;
   const height = 340;
   const pad = { l: 42, r: 78, t: 22, b: 30 };
-  const svg = frame(container, width, height);
+  const svg = frame(container, width, height,
+    `Vertical temperature and wind profile of ${model.mtn.name} at ${String(h.time.getHours()).padStart(2, '0')}:00`);
 
   const zLo = model.mtn.base - 60;
   const zHi = model.mtn.summit + 260;
@@ -278,7 +282,8 @@ export function renderHourly(container, model, { bandZ, hours = 48, unit = 'ms',
   const cols = model.hours.slice(0, hours);
   const height = 250;
   const pad = { l: 40, r: 44, t: 18, b: 42 };
-  const svg = frame(container, width, height);
+  const svg = frame(container, width, height,
+    `Hourly temperature, wind and precipitation at ${bandZ} metres for the next ${cols.length} hours`);
   const plotW = width - pad.l - pad.r;
   const plotH = height - pad.t - pad.b;
   const x = (i) => pad.l + (i + 0.5) * (plotW / cols.length);

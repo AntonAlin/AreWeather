@@ -2,12 +2,12 @@
    payloads are cached by the app itself in localStorage, where it can reason
    about how old they are and tell you. */
 
-const CACHE = 'areweather-shell-v2';
+const CACHE = 'areweather-shell-v3';
 const SHELL = [
   './', './index.html', './methods.html', './styles.css', './manifest.webmanifest',
   './js/main.js', './js/config.js', './js/util.js', './js/api.js',
   './js/physics.js', './js/ml.js', './js/forecast.js', './js/charts.js', './js/ui.js',
-  './js/methods.js',
+  './js/methods.js', './404.html',
   './fonts/inter-latin.woff2', './fonts/jetbrains-mono-latin.woff2',
 ];
 

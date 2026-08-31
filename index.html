@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to the forecast</a>
 <div class="aurora" aria-hidden="true"><span class="a1"></span><span class="a2"></span><span class="a3"></span></div>
 <div class="grain" aria-hidden="true"></div>
 
@@ -31,7 +32,7 @@
         <button type="button" data-unit="kmh">km/h</button>
       </div>
       <button type="button" class="status-pill" id="status-pill" title="Data status — click to refresh">
-        <span class="dot"></span><span id="status-text">Loading…</span>
+        <span class="dot"></span><span id="status-text" role="status" aria-live="polite">Loading…</span>
       </button>
     </div>
   </div>
@@ -40,7 +41,7 @@
 
 <main class="wrap" id="main">
 
-  <section class="hero card" id="hero" aria-live="polite">
+  <section class="hero card" id="hero">
     <div class="hero-skeleton"><span></span><span></span><span></span></div>
   </section>
 
@@ -64,8 +65,9 @@
         </div>
       </div>
     </div>
-    <div class="matrix-scroll"><div id="matrix"></div></div>
+    <div class="matrix-scroll" tabindex="0" role="group" aria-label="Elevation and time matrix, horizontally scrollable"><div id="matrix"></div></div>
     <div class="legend" id="matrix-legend"></div>
+    <p class="sub" style="margin-top:10px">Keyboard: <kbd>←</kbd> <kbd>→</kbd> step the selected hour.</p>
   </section>
 
   <div class="split">
@@ -133,6 +135,8 @@
       <a href="methods.html">Full sources, licences and every calculation →</a></p>
     <p>Non-commercial use of the Open-Meteo free tier. Everything — fetching, downscaling and model
       training — runs in your browser. No API key, no server, no cookies, no tracking, no third-party requests.</p>
+    <p>Found a forecast that was wrong, or a peak that should be on the list?
+      <a href="methods.html#contact">Get in touch</a> — the email is behind a question so crawlers cannot lift it.</p>
     <p class="tiny">Built for the Åre fjäll · elevations and coordinates are approximate summit positions · <span id="build-line"></span></p>
   </footer>
 </main>
