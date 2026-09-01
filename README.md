@@ -66,6 +66,13 @@ day the summit is *warmer* than the village. This app forecasts every 100 m band
 - **A page for everything a forecast cannot tell you** — the avalanche bulletin, live webcams, lift
   opening hours, road conditions, hut seasons, the reindeer herding areas and the local rules that
   apply in them. Nineteen links, each with a sentence on why it is there and when it matters.
+- **A page for the question a resort would rather not answer** — how long does winter have left?
+  Seven CMIP6 HighResMIP climate models, daily from 1950 to 2050, downscaled to each elevation band:
+  season length, days below freezing, midwinter thaws, and the nights still cold enough to make
+  snow. The answer is a staircase rather than a number, because the village at 380 m and the summit
+  at 1420 m are not on the same schedule. It shows the spread across all seven models rather than a
+  single confident line, states that the only available scenario is SSP5-8.5, and refuses to
+  extrapolate past the end of the data.
 - **Works with no signal.** The last forecast for each peak is cached in `localStorage` and a
   service worker caches the app shell, so the page opens at the trailhead and tells you how old
   the data is.
@@ -133,6 +140,11 @@ way round and the percentiles land where they should, checks the solar position 
 midwinter and midsummer noon elevations at this latitude, checks the aspect analysis calls shelter on
 the lee side and loading with it, and audits both languages.
 
+For the climate projections it synthesises a century with a known warming rate injected, then checks
+that the pipeline recovers that rate, that the summit keeps its winter longer than the valley, that
+the ensemble median always sits inside the model spread, and that a century with no trend in it
+trends nowhere.
+
 ## Adding or editing a mountain
 
 Everything about a peak lives in one object in [`js/config.js`](js/config.js):
@@ -145,6 +157,10 @@ Everything about a peak lives in one object in [`js/config.js`](js/config.js):
   blurb: '…', tags: ['Trail running', 'Ski mountaineering'],
 }
 ```
+
+The climate-projection thresholds — the snow-reliability depth and day count, the snowmaking
+wet-bulb limit, the degree-day melt factor and the assumed snowpack density — live together in the
+`WARMING` block of the same file, and the method page prints all of them.
 
 `exposure` is the terrain wind-acceleration factor at the summit (≈1.0 for a sheltered forested top,
 ≈1.4 for a bare exposed dome). `features` decides which activities are offered: `lift` unlocks
@@ -177,6 +193,7 @@ thresholds, snow-drift threshold — are all together in the `PHYS` block of the
 index.html          single-peak forecast
 compare.html        all ten peaks, scored side by side for the week
 trip.html           date-range planner: what to do on each day of a visit
+warming.html        Åre's exposure to a warming climate, by elevation
 links.html          everything a forecast cannot tell you
 methods.html        every calculation, source and licence
 styles.css          design system
@@ -184,6 +201,7 @@ js/config.js        peaks, models, endpoints, activities, resources, tunables
 js/api.js           Open-Meteo fetching, progressive fallback, caching
 js/physics.js       thermodynamics, soundings, downscaling, sun and aspect
 js/climate.js       thirty-year day-of-year climatology and percentiles
+js/projection.js    CMIP6 winter metrics, the degree-day snowpack, model ensembling
 js/ml.js            ridge / logistic regression, model skill weighting, validation
 js/forecast.js      assembles everything into one view model, activity scoring
 js/charts.js        hand-rolled SVG: elevation matrix, profile, aspect rose, year strip
@@ -193,6 +211,7 @@ js/observations.js  SMHI station selection, comparison and the verification log
 js/compare.js       state and wiring for the comparison view
 js/trip.js          the trip planner and its packing rules
 js/links.js         renders the resources page from configuration
+js/warming.js       state and wiring for the climate-projection view
 js/methods.js       renders the method page from the live configuration
 js/i18n.js          every string, in both languages
 sw.js               offline app shell
@@ -233,6 +252,7 @@ configuration the forecast runs on, covering every formula and every licence. Th
 | [NOAA/NCEP](https://www.weather.gov/disclaimer) | GFS | Public domain | Credit as a courtesy |
 | [Copernicus C3S](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land) | ERA5-Land as the ML training target, ERA5 for the thirty-year climatology | CC BY (since 2 Jul 2025) | Generated using Copernicus Climate Change Service information |
 | [SMHI](https://www.smhi.se/data/om-smhis-data/villkor-for-anvandning) | Live station observations | CC BY 4.0 SE | Observation data from SMHI |
+| [CMIP6 HighResMIP](https://pcmdi.llnl.gov/CMIP6/TermsOfUse/TermsOfUse6-1.html) | Climate projections 1950–2050, SSP5-8.5 | CC BY 4.0 | WCRP Coupled Model Intercomparison Project Phase 6 |
 
 CC BY 4.0 requires three things and the site does all three, in the footer of every page: credit the
 source, link the licence, and **state that changes were made** — which they emphatically are, since

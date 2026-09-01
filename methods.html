@@ -26,6 +26,7 @@
       <a class="nav-link" href="compare.html" data-i18n="nav.compare">Compare peaks</a>
       <a class="nav-link" href="trip.html" data-i18n="nav.trip">Plan a trip</a>
       <a class="nav-link" href="links.html" data-i18n="nav.links">Everything else</a>
+      <a class="nav-link" href="warming.html" data-i18n="nav.warming">Winter ahead</a>
       <a class="back-link" href="./" data-i18n="nav.back">← Back to the forecast</a>
     </div>
   </div>
@@ -434,6 +435,22 @@ band at elevation <em>z</em> = quantile + [ <em>T</em>(<em>z</em>) − <em>T</em
         <div class="table-scroll"><table id="phys-table"></table></div>
         <h3 data-i18n-html="m.constants.4">The mountains</h3>
         <div class="table-scroll"><table id="mountains-table"></table></div>
+      </section>
+
+      <section class="card" id="warming">
+        <h2 data-i18n-html="m.warm.1">10 · Climate projections</h2>
+        <p data-i18n-html="m.warm.2">Everything behind the <a href="warming.html">winter ahead</a> page: which models, which scenario, and every threshold a number on that page is counted against.</p>
+        <h3 data-i18n-html="m.warm.3">The models</h3>
+        <p data-i18n-html="m.warm.4">Seven CMIP6 HighResMIP models, daily, 1950–2050, statistically downscaled to 10&nbsp;km and bias-corrected against ERA5 by Open-Meteo. Historical runs cover 1950–2014; from 2015 the projections follow SSP5-8.5, the only scenario these high-resolution experiments were run under.</p>
+        <div class="table-scroll"><table id="climate-models-table"></table></div>
+        <h3 data-i18n-html="m.warm.5">Thresholds</h3>
+        <p data-i18n-html="m.warm.6">Every one of these is a judgement call. They are listed here so the judgement can be argued with rather than inferred.</p>
+        <div class="table-scroll"><table id="warming-table"></table></div>
+        <h3 data-i18n-html="m.warm.7">The snowpack model</h3>
+        <p data-i18n-html="m.warm.8">The climate data carries snowfall but not snow depth, so season length and every figure involving a 30&nbsp;cm cover come from a degree-day model written for this site. Precipitation phase is decided at each elevation from the wet-bulb temperature, exactly as in the forecast; what falls as snow is added to a water-equivalent store, and each day <code>melt = 3.5 × max(0, T<sub>mean</sub>)</code> millimetres are taken back out. Depth is water equivalent at a settled density of 300&nbsp;kg/m³.</p>
+        <div class="callout" data-i18n-html="m.warm.9"><b>This is the weakest link on that page.</b> There is no wind redistribution, no rain percolating and refreezing, no aspect or shading, and no snowmaking. The output is an index that moves in the right direction by roughly the right amount, not a measurement of snow depth.</div>
+        <h3 data-i18n-html="m.warm.10">Why one point for ten peaks</h3>
+        <p data-i18n-html="m.warm.11">These grid cells are 20–50&nbsp;km before downscaling — wider than the distance from Åre to Storlien. Reading each peak separately would produce ten numbers that differ only by interpolation artefacts and imply a resolution that does not exist. The whole massif is read at one point instead, and elevation is applied afterwards with the same lapse rate the forecast uses. Height is the variable that actually matters here, and it is the one the models can support.</p>
       </section>
 
       <section class="card" id="limits">

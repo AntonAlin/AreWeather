@@ -13,7 +13,9 @@ import { distanceKm, parseStationSet, nearestStations, collectStation, compareWi
 import { wetBulb, dewPoint, windChill, snowRatio, buildSounding, temperatureAt, solarPosition, aspectAnalysis, aspectAdvice, angleBetween, ASPECTS } from '../js/physics.js';
 import { summarise, percentileOf, contextFor, unusualness, weekly, dayOfYear } from '../js/climate.js';
 import { STRINGS, LANGS } from '../js/i18n.js';
-import { round } from '../js/util.js';
+import { WARMING, CLIMATE_MODELS } from '../js/config.js';
+import { extract, winters, ensemble, overPeriod, trend, staircase, verdict, reliabilityLine, winterYear, depthFromWater, reliableWaterEquivalent } from '../js/projection.js';
+import { round, mean } from '../js/util.js';
 import fs from 'node:fs';
 
 let failures = 0;
@@ -561,6 +563,114 @@ console.log('\nTranslations');
 
   const activityStrings = ACTIVITIES.flatMap((a) => [a.name, a.blurb, ...a.rules.map((r) => r.label)]);
   ok(activityStrings.every((v) => v && typeof v.en === 'string' && typeof v.sv === 'string'), 'every activity name, blurb and rule is bilingual');
+}
+
+/* ---------- 14. climate projections ---------- */
+console.log('\nClimate projections');
+{
+  /* A synthetic century at 700 m: a clean seasonal cycle, a warming trend of
+     0.4 °C per decade, and enough precipitation to build a pack. */
+  function century({ warmPerDecade = 0.4, base = -1.5, elevation = 700, wet = 3.2 } = {}) {
+    const time = [], tmax = [], tmin = [], precipitation_sum = [], relative_humidity_2m_mean = [];
+    let seed = 11;
+    const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+    for (let y = 1950; y <= 2050; y++) {
+      for (let doy = 1; doy <= 365; doy++) {
+        const d = new Date(Date.UTC(y, 0, doy));
+        time.push(d.toISOString().slice(0, 10));
+        const season = base + 13 * Math.sin(((doy - 105) / 365) * 2 * Math.PI);
+        const warming = ((y - 1950) / 10) * warmPerDecade;
+        const noise = (rnd() - 0.5) * 4;
+        const mid = season + warming + noise;
+        tmax.push(round(mid + 3, 2));
+        tmin.push(round(mid - 3, 2));
+        precipitation_sum.push(round(rnd() * wet * 2, 2));
+        relative_humidity_2m_mean.push(round(72 + rnd() * 20, 1));
+      }
+    }
+    return { elevation, daily: { time, temperature_2m_max: tmax, temperature_2m_min: tmin, precipitation_sum, relative_humidity_2m_mean } };
+  }
+
+  ok(winterYear('2026-11-14') === 2026 && winterYear('2026-02-14') === 2025, 'a winter is labelled by the year it starts in');
+  ok(near(depthFromWater(reliableWaterEquivalent()), WARMING.reliableDepth, 1e-9), 'the depth threshold round-trips through water equivalent');
+
+  const raw = century();
+  const series = extract(raw, null);
+  ok(series && series.time.length > 36000, 'a single-model response is read without a model suffix', `${series?.time?.length}`);
+
+  /* the same payload, suffixed the way a multi-model request comes back */
+  const suffixed = { elevation: raw.elevation, daily: Object.fromEntries(Object.entries(raw.daily).map(([k, v]) => [k === 'time' ? k : `${k}_EC_Earth3P_HR`, v])) };
+  const s2 = extract(suffixed, 'EC_Earth3P_HR');
+  ok(s2 && s2.time.length === series.time.length, 'and with one when the request asked for a named model');
+  ok(extract({ daily: { time: [] } }, null) === null, 'an empty response yields nothing rather than throwing');
+
+  const low = winters(series, 400);
+  const high = winters(series, 1400);
+  ok(low.length > 95 && high.length > 95, 'a century in gives about a century of winters out', `${low.length}`);
+  ok(low.every((w) => w.days > 300), 'and the half-winters at each end are dropped');
+
+  const meanOf = (rows, k) => mean(rows.map((r) => r[k]).filter(Number.isFinite));
+  ok(meanOf(high, 'freezeDays') > meanOf(low, 'freezeDays') + 20, 'the summit freezes for longer than the valley',
+    `${round(meanOf(low, 'freezeDays'))} vs ${round(meanOf(high, 'freezeDays'))}`);
+  ok(meanOf(high, 'coverDays') > meanOf(low, 'coverDays'), 'and holds a cover for longer');
+  ok(meanOf(high, 'thawDays') < meanOf(low, 'thawDays'), 'while thawing in midwinter less often');
+  ok(meanOf(high, 'snowShare') > meanOf(low, 'snowShare'), 'and taking more of its precipitation as snow');
+  ok(high.every((w) => w.snowShare >= 0 && w.snowShare <= 1), 'the snow share is a share');
+
+  /* the trend has to survive the round trip */
+  const early = overPeriod(low, 'coverDays', { from: 1961, to: 1990 });
+  const late = overPeriod(low, 'coverDays', { from: 2031, to: 2050 });
+  ok(late < early, 'a warming century shortens the season', `${round(early)} → ${round(late)}`);
+  const tTrend = trend(low, 'tmeanWinter');
+  ok(tTrend && near(tTrend.perDecade, 0.4, 0.12), 'and the injected warming rate is recovered', `${round(tTrend?.perDecade, 2)} °C/decade`);
+  ok(trend(low.slice(0, 4), 'coverDays') === null, 'a trend is refused on too few winters');
+
+  const flat = winters(extract(century({ warmPerDecade: 0 }), null), 700);
+  const flatTrend = trend(flat, 'coverDays');
+  ok(flatTrend && Math.abs(flatTrend.perDecade) < 3, 'a century with no warming trends nowhere', `${round(flatTrend?.perDecade, 2)}`);
+
+  /* ensembling */
+  const runs = [0.2, 0.4, 0.7].map((r) => winters(extract(century({ warmPerDecade: r }), null), 700));
+  const ens = ensemble(runs);
+  ok(ens.length > 95, 'the ensemble spans every winter the models share');
+  ok(ens.every((r) => r.n === 3), 'and knows how many models stand behind each one');
+  ok(ens.every((r) => !Number.isFinite(r.coverDays) || (r.coverDaysLo <= r.coverDays && r.coverDays <= r.coverDaysHi)),
+    'the median always sits inside the spread');
+  const lateEns = ens.filter((r) => r.winter >= 2040);
+  ok(lateEns.some((r) => r.coverDaysHi > r.coverDaysLo), 'and the models disagree more than not');
+  ok(ensemble([]).length === 0, 'no models means no ensemble, not a crash');
+
+  /* the staircase */
+  const byBand = new Map(WARMING.bands.map((z) => [z, ensemble([winters(series, z)])]));
+  const bands = staircase(byBand, 'coverDays');
+  ok(bands.length === WARMING.bands.length, 'the staircase has one step per band');
+  ok(bands.every((b) => b.periods.length === WARMING.periods.length), 'and one value per period on each step');
+  const stairValues = bands.map((b) => b.periods.find((p) => p.id === 'present').value);
+  ok(stairValues.every((v, i) => i === 0 || v >= stairValues[i - 1] - 1), 'the season never gets shorter as you climb', stairValues.map((v) => round(v)).join(' → '));
+
+  const now = reliabilityLine(bands, 'present');
+  const later = reliabilityLine(bands, 'future');
+  ok(now.z === null || WARMING.bands.includes(now.z), 'the reliability line lands on a real band');
+  ok(later.z === null || now.z === null || later.z >= now.z, 'and never walks downhill as the climate warms', `${now.z} → ${later.z}`);
+
+  const v = verdict(bands);
+  ok(v.length === bands.length, 'a verdict per band');
+  ok(v.every((r) => !Number.isFinite(r.lost) || near(r.lost, r.future - r.present, 1e-9)), 'the change is future minus present');
+  ok(v.every((r) => !r.reliableLater || r.reliableNow), 'nothing gains reliability it did not already have');
+
+  /* degraded inputs */
+  ok(winters(null, 700).length === 0, 'no series, no winters');
+  const holes = extract(century(), null);
+  for (let i = 0; i < holes.tmax.length; i++) if (i % 365 < 40) holes.tmax[i] = NaN;
+  const holed = winters(holes, 700);
+  ok(holed.length > 90, 'a series missing weeks at a time still produces winters', `${holed.length}`);
+  ok(holed.every((w) => w.days >= 240), 'and every one it reports has most of a year behind it');
+  const shortSeries = extract({ elevation: 700, daily: { time: ['2020-01-01', '2020-01-02'], temperature_2m_max: [1, 2], temperature_2m_min: [-1, 0], precipitation_sum: [0, 0], relative_humidity_2m_mean: [80, 80] } }, null);
+  ok(winters(shortSeries, 700).length === 0, 'and two days is never reported as a winter');
+
+  ok(CLIMATE_MODELS.length === 7 && new Set(CLIMATE_MODELS.map((m) => m.key)).size === 7, 'seven distinct climate models are configured');
+  ok(WARMING.bands.every((z, i) => i === 0 || z > WARMING.bands[i - 1]), 'the bands are in order');
+  ok(WARMING.periods.every((p) => p.to > p.from), 'and every period runs forwards');
 }
 
 console.log(`\n${failures ? `${failures} FAILED` : 'all checks passed'}\n`);

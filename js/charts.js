@@ -536,3 +536,168 @@ export function renderClimateYear(container, weeks, { width = 760, todayDoy, lab
     text(svg, x(week), pad.t - 4, t('climate.now'), { size: 8, anchor: 'middle', fill: '#fff', weight: 700, tracking: 1 });
   }
 }
+
+
+/* ---------- the warming page ---------- */
+
+/**
+ * One winter metric from 1950 to 2050: the spread across models as a band, the
+ * model median as a line, and the observed record over the top of it.
+ *
+ * The band is the point of the chart. Seven models disagree by a wide margin
+ * about any single winter, and drawing only the median would hide exactly the
+ * uncertainty a reader needs in order to judge how much to believe the line.
+ */
+export function renderWarmingTrend(container, { rows, observed, metric, unit, threshold, thresholdLabel, label, width = 860 }) {
+  const height = 300;
+  const pad = { l: 44, r: 16, t: 18, b: 34 };
+  const svg = frame(container, width, height, label);
+  const plotW = width - pad.l - pad.r;
+  const plotH = height - pad.t - pad.b;
+  const valid = rows.filter((r) => Number.isFinite(r[metric]));
+  if (!valid.length) return;
+
+  const obs = (observed ?? []).filter((r) => Number.isFinite(r[metric]));
+  const all = [
+    ...valid.flatMap((r) => [r[`${metric}Lo`], r[`${metric}Hi`], r[metric]]),
+    ...obs.map((r) => r[metric]),
+    threshold,
+  ].filter(Number.isFinite);
+  const lo = Math.min(0, Math.floor(Math.min(...all)));
+  const hi = Math.ceil(Math.max(...all) * 1.05);
+  const x0 = valid[0].winter;
+  const x1 = valid[valid.length - 1].winter;
+  const x = (w) => pad.l + ((w - x0) / (x1 - x0)) * plotW;
+  const y = (v) => pad.t + (1 - (v - lo) / (hi - lo || 1)) * plotH;
+
+  /* horizontal grid */
+  const step = niceStep(hi - lo);
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
+    svgEl('line', { x1: pad.l, y1: y(v), x2: width - pad.r, y2: y(v), stroke: GRID, 'stroke-dasharray': '2 6' }, svg);
+    text(svg, pad.l - 6, y(v) + 3.5, `${dec(v, 0)}`, { size: 9, anchor: 'end' });
+  }
+  if (unit) text(svg, pad.l - 6, pad.t - 6, unit, { size: 8.5, anchor: 'end', tracking: 0.5 });
+
+  /* where the projection takes over from the models' historical runs */
+  const split = 2015;
+  if (split > x0 && split < x1) {
+    svgEl('line', { x1: x(split), y1: pad.t, x2: x(split), y2: pad.t + plotH, stroke: 'rgba(255,255,255,.22)', 'stroke-dasharray': '3 4' }, svg);
+    text(svg, x(split) + 4, pad.t + 10, t('warm.chart.projected'), { size: 8, fill: '#8b95a5', tracking: 0.5 });
+  }
+
+  /* model spread */
+  const up = valid.map((r) => `${x(r.winter)} ${y(r[`${metric}Hi`])}`);
+  const dn = [...valid].reverse().map((r) => `${x(r.winter)} ${y(r[`${metric}Lo`])}`);
+  svgEl('path', { d: `M ${[...up, ...dn].join(' L ')} Z`, fill: 'rgba(167,139,250,.16)', stroke: 'none' }, svg);
+
+  /* the threshold that makes the metric mean something */
+  if (Number.isFinite(threshold) && threshold > lo && threshold < hi) {
+    svgEl('line', { x1: pad.l, y1: y(threshold), x2: width - pad.r, y2: y(threshold), stroke: 'rgba(251,191,36,.6)', 'stroke-width': 1.2, 'stroke-dasharray': '5 4' }, svg);
+    if (thresholdLabel) text(svg, width - pad.r, y(threshold) - 5, thresholdLabel, { size: 8.5, anchor: 'end', fill: '#fbbf24', mono: false });
+  }
+
+  const line = (pts, stroke, w2, dash) => svgEl('polyline', {
+    points: pts.join(' '), fill: 'none', stroke, 'stroke-width': w2,
+    'stroke-dasharray': dash ?? 'none', 'stroke-linejoin': 'round', 'stroke-linecap': 'round',
+  }, svg);
+
+  /* the raw year-to-year median, faint, so the noise is visible at all */
+  line(valid.map((r) => `${x(r.winter)},${y(r[metric])}`), 'rgba(167,139,250,.45)', 1);
+
+  /* smoothed median and smoothed observation */
+  const smoothed = runningMean(valid.map((r) => [r.winter, r[metric]]), 15);
+  line(smoothed.map(([w, v]) => `${x(w)},${y(v)}`), '#a78bfa', 2.4);
+  if (obs.length >= 15) {
+    const so = runningMean(obs.map((r) => [r.winter, r[metric]]), 15);
+    line(so.map(([w, v]) => `${x(w)},${y(v)}`), '#4fd1ff', 2.4);
+  }
+
+  /* decade ticks */
+  for (let w = Math.ceil(x0 / 20) * 20; w <= x1; w += 20) {
+    text(svg, x(w), height - pad.b + 16, String(w), { size: 9, anchor: 'middle' });
+  }
+
+  key(container, [
+    ['#4fd1ff', t('warm.key.observed')],
+    ['#a78bfa', t('warm.key.models')],
+    ['rgba(167,139,250,.35)', t('warm.key.spread'), 'block'],
+  ]);
+}
+
+/** A round-ish axis step for a given range. */
+function niceStep(range) {
+  const raw = range / 5;
+  const mag = 10 ** Math.floor(Math.log10(Math.max(raw, 1e-6)));
+  return [1, 2, 2.5, 5, 10].map((m) => m * mag).find((v) => v >= raw) ?? mag * 10;
+}
+
+/** Centred running mean over [x, y] pairs. */
+function runningMean(pts, window) {
+  const half = Math.floor(window / 2);
+  const out = [];
+  for (let i = 0; i < pts.length; i++) {
+    const slice = pts.slice(Math.max(0, i - half), i + half + 1).map((p) => p[1]).filter(Number.isFinite);
+    if (slice.length >= half) out.push([pts[i][0], slice.reduce((a, b) => a + b, 0) / slice.length]);
+  }
+  return out;
+}
+
+/**
+ * The elevation staircase: the same metric at every band, for three periods.
+ *
+ * Everything about Åre's exposure is in the shape of this chart. The village and
+ * the summit are 1040 m apart, which is most of a climate zone, and they do not
+ * lose their winter on the same schedule — a single number for "Åre" would hide
+ * the only part of the answer that can be acted on.
+ */
+export function renderStaircase(container, bands, { threshold, thresholdLabel, unit, label, width = 860 }) {
+  const rows = [...bands].reverse();                      // summit at the top
+  const rowH = 46;
+  const pad = { l: 62, r: 20, t: 26, b: 30 };
+  const height = pad.t + pad.b + rows.length * rowH;
+  const svg = frame(container, width, height, label);
+  const plotW = width - pad.l - pad.r;
+
+  const vals = rows.flatMap((b) => b.periods.map((p) => p.value)).filter(Number.isFinite);
+  if (!vals.length) return;
+  const hi = Math.max(Math.ceil(Math.max(...vals, threshold ?? 0) / 20) * 20, 20);
+  const x = (v) => pad.l + (v / hi) * plotW;
+
+  const COLORS = { past: 'rgba(224,242,254,.45)', present: '#4fd1ff', future: '#f472b6' };
+
+  const step = niceStep(hi);
+  for (let v = 0; v <= hi; v += step) {
+    svgEl('line', { x1: x(v), y1: pad.t - 6, x2: x(v), y2: height - pad.b + 2, stroke: GRID, 'stroke-dasharray': '2 6' }, svg);
+    text(svg, x(v), height - pad.b + 16, `${dec(v, 0)}`, { size: 9, anchor: 'middle' });
+  }
+  if (unit) text(svg, width - pad.r, pad.t - 12, unit, { size: 8.5, anchor: 'end', tracking: 0.5 });
+
+  if (Number.isFinite(threshold) && threshold <= hi) {
+    svgEl('line', { x1: x(threshold), y1: pad.t - 10, x2: x(threshold), y2: height - pad.b + 2, stroke: 'rgba(251,191,36,.7)', 'stroke-width': 1.4, 'stroke-dasharray': '5 4' }, svg);
+    if (thresholdLabel) text(svg, x(threshold), pad.t - 14, thresholdLabel, { size: 8.5, anchor: 'middle', fill: '#fbbf24', mono: false });
+  }
+
+  rows.forEach((band, i) => {
+    const top = pad.t + i * rowH;
+    text(svg, pad.l - 10, top + rowH / 2 + 3.5, `${band.z} m`, { size: 10, anchor: 'end', fill: '#c3ccd8' });
+    const barH = 8;
+    band.periods.forEach((p, k) => {
+      const yy = top + 6 + k * (barH + 3);
+      svgEl('rect', { x: pad.l, y: yy, width: plotW, height: barH, fill: 'rgba(255,255,255,.04)', rx: 3 }, svg);
+      if (!Number.isFinite(p.value)) return;
+      const end = x(p.value);
+      svgEl('rect', { x: pad.l, y: yy, width: Math.max(2, end - pad.l), height: barH, fill: COLORS[p.id], rx: 3 }, svg);
+      /* The label sits after the bar while there is room for it, and moves
+         inside the bar's own end once the bar runs close to the axis. */
+      const outside = end + 30 < width - pad.r;
+      text(svg, outside ? end + 6 : end - 5, yy + barH - 0.5, dec(p.value, 0),
+        { size: 8.5, anchor: outside ? 'start' : 'end', fill: outside ? '#8b95a5' : 'rgba(6,8,11,.8)', weight: outside ? 400 : 600 });
+    });
+  });
+
+  key(container, [
+    [COLORS.past, t('warm.period.past'), 'block'],
+    [COLORS.present, t('warm.period.present'), 'block'],
+    [COLORS.future, t('warm.period.future'), 'block'],
+  ]);
+}

@@ -9,11 +9,11 @@
    3. Units are pinned explicitly (m/s, mm, °C) — the API default for wind is
       km/h and silently inheriting that would be a real bug. */
 
-import { APP, ENDPOINTS, MODELS, PROFILE_MODELS, PRESSURE_LEVELS, ENSEMBLE_MODELS, SMHI } from './config.js';
+import { APP, ENDPOINTS, MODELS, PROFILE_MODELS, PRESSURE_LEVELS, ENSEMBLE_MODELS, SMHI, WARMING } from './config.js';
 import { store, isoDate, daysAgo } from './util.js';
 
 const NS = `areweather.${APP.version}`;
-const TTL = { forecast: 30 * 60e3, ensemble: 3 * 3600e3, training: 24 * 3600e3, observations: 20 * 60e3, climate: 30 * 864e5 };
+const TTL = { forecast: 30 * 60e3, ensemble: 3 * 3600e3, training: 24 * 3600e3, observations: 20 * 60e3, climate: 30 * 864e5, projection: 180 * 864e5 };
 
 export class ApiError extends Error {}
 
@@ -255,6 +255,91 @@ export async function fetchClimate(mtn, { force = false, years = 30 } = {}) {
     if (hit) return { data: hit.data, cachedAt: hit.t, stale: true, error: err };
     throw err;
   }
+}
+
+/* ---------- climate projections ---------- */
+
+/** Daily variables the warming page needs, in the order they are given up. */
+const CLIMATE_VARS = ['temperature_2m_max', 'temperature_2m_min', 'precipitation_sum', 'relative_humidity_2m_mean'];
+
+/**
+ * One CMIP6 model, a century of daily values, for the massif anchor point.
+ *
+ * This is a megabyte or so per model, which is why it is fetched one model at a
+ * time rather than all seven in a single request: the page can render as each
+ * arrives, and a slow connection gets a partial answer instead of nothing. The
+ * caller summarises the response and calls `keepProjection` with the few hundred
+ * numbers that survive, so the raw century is never written to storage.
+ *
+ * A projection of 1950-2050 does not change from week to week, so the summary
+ * is treated as good for half a year.
+ */
+export async function fetchProjection(modelKey, { force = false } = {}) {
+  const key = `projection.${modelKey}.v1`;
+  const hit = cached(key, TTL.projection);
+  if (hit && hit.fresh && !force) return { data: hit.data, cachedAt: hit.t, stale: false };
+
+  const base = {
+    latitude: WARMING.anchor.lat,
+    longitude: WARMING.anchor.lon,
+    start_date: `${WARMING.from}-01-01`,
+    end_date: `${WARMING.to}-12-31`,
+    temperature_unit: 'celsius',
+    precipitation_unit: 'mm',
+    wind_speed_unit: 'ms',
+    models: modelKey,
+  };
+  try {
+    const { data } = await tryVariants(ENDPOINTS.climate, [
+      { ...base, daily: CLIMATE_VARS },
+      { ...base, daily: CLIMATE_VARS.slice(0, 3) },
+      { ...base, daily: CLIMATE_VARS.slice(0, 2) },
+    ], 90000);
+    return { data: { raw: data, model: modelKey }, cachedAt: Date.now(), stale: false };
+  } catch (err) {
+    if (hit) return { data: hit.data, cachedAt: hit.t, stale: true, error: err };
+    throw err;
+  }
+}
+
+/** Store the summarised projection, so the raw century never has to be kept. */
+export function keepProjection(modelKey, summary) {
+  keep(`projection.${modelKey}.v1`, summary);
+}
+
+/**
+ * The observed record for the same point, from ERA5 — what has already happened,
+ * against which the models' own historical runs can be read.
+ */
+export async function fetchObserved({ force = false } = {}) {
+  const key = 'projection.observed.v1';
+  const hit = cached(key, TTL.projection);
+  if (hit && hit.fresh && !force) return { data: hit.data, cachedAt: hit.t, stale: false };
+
+  const base = {
+    ...COMMON,
+    latitude: WARMING.anchor.lat,
+    longitude: WARMING.anchor.lon,
+    start_date: `${WARMING.from}-01-01`,
+    end_date: isoDate(daysAgo(7)),
+    daily: CLIMATE_VARS,
+    models: 'era5',
+  };
+  try {
+    const { data } = await tryVariants(ENDPOINTS.archive, [
+      base,
+      { ...base, daily: CLIMATE_VARS.slice(0, 3) },
+    ], 90000);
+    return { data: { raw: data, model: 'era5' }, cachedAt: Date.now(), stale: false };
+  } catch (err) {
+    if (hit) return { data: hit.data, cachedAt: hit.t, stale: true, error: err };
+    throw err;
+  }
+}
+
+/** Store the summarised observed record. */
+export function keepObserved(summary) {
+  keep('projection.observed.v1', summary);
 }
 
 /** Store the derived climatology, so the raw response never has to be kept. */

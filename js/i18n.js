@@ -1081,8 +1081,8 @@ export const STRINGS = {
     sv: 'Bergen',
   },
   'm.limits.1': {
-    en: '10 · What this is not',
-    sv: '10 · Vad det här inte är',
+    en: '11 · What this is not',
+    sv: '11 · Vad det här inte är',
   },
   'm.limits.2': {
     en: '<b>This is not an avalanche forecast.</b> The wind-loading index and new-snow figures are meteorological indices. They know nothing about aspect, slope angle, terrain traps, or the buried weak layer that decides whether a slope releases. For avalanche danger in the Swedish fjäll use <a href="https://www.lavinprognoser.se" target="_blank" rel="noopener">lavinprognoser.se</a>; for official warnings, <a href="https://www.smhi.se" target="_blank" rel="noopener">SMHI</a>.',
@@ -1113,8 +1113,8 @@ export const STRINGS = {
     sv: 'Källkoden är offentlig: varje formel på den här sidan finns i <code>js/physics.js</code>, <code>js/ml.js</code> och <code>js/forecast.js</code>, och <code>tools/selftest.mjs</code> kontrollerar dem mot kända fall utan nätverk.',
   },
   'm.contact.1': {
-    en: '11 · Contact',
-    sv: '11 · Kontakt',
+    en: '12 · Contact',
+    sv: '12 · Kontakt',
   },
   'm.contact.2': {
     en: 'Wrong forecast, broken chart, a peak that should be on the list, or an exposure factor you think is nonsense — all of it is welcome. There are two ways to reach me.',
@@ -1455,6 +1455,222 @@ export const STRINGS = {
   'links.disclaimer': {
     en: 'These are other people\'s sites, linked because they are useful. Nothing here is affiliated with them, and none of them has any idea this page exists.',
     sv: 'Det här är andras sajter, länkade för att de är användbara. Ingenting här är knutet till dem, och ingen av dem vet att den här sidan finns.',
+  },
+
+  /* ---------- method page: climate projections ---------- */
+  'm.warm.1': { en: '10 · Climate projections', sv: '10 · Klimatprojektioner' },
+  'm.warm.2': {
+    en: 'Everything behind the <a href="warming.html">winter ahead</a> page: which models, which scenario, and every threshold a number on that page is counted against.',
+    sv: 'Allt bakom sidan <a href="warming.html">vintern framåt</a>: vilka modeller, vilket scenario och varje gränsvärde som en siffra på den sidan räknas mot.',
+  },
+  'm.warm.3': { en: 'The models', sv: 'Modellerna' },
+  'm.warm.4': {
+    en: 'Seven CMIP6 HighResMIP models, daily, 1950–2050, statistically downscaled to 10&nbsp;km and bias-corrected against ERA5 by Open-Meteo. Historical runs cover 1950–2014; from 2015 the projections follow SSP5-8.5, the only scenario these high-resolution experiments were run under.',
+    sv: 'Sju CMIP6 HighResMIP-modeller, dygnsvis, 1950–2050, statistiskt nedskalade till 10&nbsp;km och biaskorrigerade mot ERA5 av Open-Meteo. De historiska körningarna täcker 1950–2014; från 2015 följer projektionerna SSP5-8.5, det enda scenario dessa högupplösta experiment kördes under.',
+  },
+  'm.warm.5': { en: 'Thresholds', sv: 'Gränsvärden' },
+  'm.warm.6': {
+    en: 'Every one of these is a judgement call. They are listed here so the judgement can be argued with rather than inferred.',
+    sv: 'Vart och ett av dem är en bedömningsfråga. De står här för att bedömningen ska gå att invända mot i stället för att gissas fram.',
+  },
+  'm.warm.7': { en: 'The snowpack model', sv: 'Snötäckesmodellen' },
+  'm.warm.8': {
+    en: 'The climate data carries snowfall but not snow depth, so season length and every figure involving a 30&nbsp;cm cover come from a degree-day model written for this site. Precipitation phase is decided at each elevation from the wet-bulb temperature, exactly as in the forecast; what falls as snow is added to a water-equivalent store, and each day <code>melt = 3.5 × max(0, T<sub>mean</sub>)</code> millimetres are taken back out. Depth is water equivalent at a settled density of 300&nbsp;kg/m³.',
+    sv: 'Klimatdata innehåller snöfall men inte snödjup, så säsongslängd och varje siffra som rör ett 30&nbsp;cm täcke kommer från en graddagsmodell skriven för den här sajten. Nederbördens fas avgörs på varje höjd av våttemperaturen, precis som i prognosen; det som faller som snö läggs till ett vattenekvivalentlager, och varje dygn tas <code>smälta = 3,5 × max(0, T<sub>medel</sub>)</code> millimeter ut igen. Djupet är vattenekvivalenten vid en sättningsdensitet på 300&nbsp;kg/m³.',
+  },
+  'm.warm.9': {
+    en: '<b>This is the weakest link on that page.</b> There is no wind redistribution, no rain percolating and refreezing, no aspect or shading, and no snowmaking. The output is an index that moves in the right direction by roughly the right amount, not a measurement of snow depth.',
+    sv: '<b>Det här är den svagaste länken på den sidan.</b> Det finns ingen vindtransport, inget regn som tränger ned och återfryser, inga väderstreck eller skuggning, och ingen snöläggning. Resultatet är ett index som rör sig åt rätt håll med ungefär rätt storlek, inte en mätning av snödjup.',
+  },
+  'm.warm.10': { en: 'Why one point for ten peaks', sv: 'Varför en punkt för tio toppar' },
+  'm.warm.11': {
+    en: 'These grid cells are 20–50&nbsp;km before downscaling — wider than the distance from Åre to Storlien. Reading each peak separately would produce ten numbers that differ only by interpolation artefacts and imply a resolution that does not exist. The whole massif is read at one point instead, and elevation is applied afterwards with the same lapse rate the forecast uses. Height is the variable that actually matters here, and it is the one the models can support.',
+    sv: 'Rutorna är 20–50&nbsp;km före nedskalning — bredare än avståndet mellan Åre och Storlien. Att läsa av varje topp för sig skulle ge tio siffror som bara skiljer sig genom interpolationsartefakter och antyda en upplösning som inte finns. I stället läses hela massivet av i en punkt, och höjden läggs på efteråt med samma temperaturgradient som prognosen använder. Höjden är den variabel som faktiskt spelar roll här, och det är den modellerna kan bära.',
+  },
+  'tbl.country': { en: 'Country', sv: 'Land' },
+  'm.warm.model': { en: 'Model', sv: 'Modell' },
+  'm.warm.centre': { en: 'Modelling centre', sv: 'Modellcentrum' },
+  'm.warm.native': { en: 'Native grid', sv: 'Ursprungligt rutnät' },
+  'm.warm.threshold': { en: 'Threshold', sv: 'Gränsvärde' },
+  'm.warm.value': { en: 'Value', sv: 'Värde' },
+  'm.warm.meaning': { en: 'What it decides', sv: 'Vad det avgör' },
+  'm.warm.th.depth': { en: 'A season exists when the cover reaches this depth', sv: 'En säsong finns när täcket når det här djupet' },
+  'm.warm.th.days': { en: '…on at least this many days in a winter', sv: '…under minst så här många dygn under en vinter' },
+  'm.warm.th.wb': { en: 'Wet-bulb temperature at or below which a snow gun can run', sv: 'Våttemperatur vid eller under vilken en snökanon kan gå' },
+  'm.warm.th.thaw': { en: 'A December–March day whose maximum passes this counts as a thaw', sv: 'Ett dygn december–mars vars maximum passerar detta räknas som blidväder' },
+  'm.warm.th.melt': { en: 'Degree-day melt factor, millimetres of water per °C per day', sv: 'Graddagsfaktor för smältning, millimeter vatten per °C och dygn' },
+  'm.warm.th.density': { en: 'Settled snowpack density used to turn water equivalent into depth', sv: 'Sättningsdensitet som omvandlar vattenekvivalent till djup' },
+  'm.warm.th.year': { en: 'A winter year starts in this month, so one winter is never split in two', sv: 'Ett vinterår börjar den här månaden, så att en vinter aldrig delas i två' },
+  'm.warm.th.lapse': { en: 'Lapse rate used to move the grid cell to each elevation, °C per 100 m', sv: 'Temperaturgradient som flyttar rutan till varje höjd, °C per 100 m' },
+
+  /* ---------- the warming page ---------- */
+  'page.warming.title': { en: 'How long does winter have left? — ÅreWeather', sv: 'Hur länge har vintern kvar? — ÅreWeather' },
+  'page.warming.description': {
+    en: 'Åre’s exposure to a warming climate, by elevation: how the season length, the thaws, the snowmaking window and the snowpack change between 1950 and 2050 across seven CMIP6 climate models.',
+    sv: 'Åres utsatthet i ett varmare klimat, höjd för höjd: hur säsongslängd, blidväder, snöläggningsfönster och snötäcke förändras mellan 1950 och 2050 enligt sju CMIP6-klimatmodeller.',
+  },
+  'brand.warming': { en: 'winter, ahead', sv: 'vintern framför oss' },
+  'nav.warming': { en: 'Winter ahead', sv: 'Vintern framåt' },
+
+  'warm.h1': { en: 'How long does winter have left?', sv: 'Hur länge har vintern kvar?' },
+  'warm.lede': {
+    en: 'Åre’s winter does not end everywhere at once. The village sits at 380 m and Åreskutan tops out at 1420 m, and a thousand metres is most of a climate zone — so the honest question is not whether Åre keeps its winter, but how far up the mountain you have to go to find it. This page works through seven climate models to answer that, and is explicit about where the numbers stop being trustworthy.',
+    sv: 'Åres vinter tar inte slut överallt samtidigt. Byn ligger på 380 m och Åreskutan toppar på 1420 m, och tusen höjdmeter är större delen av en klimatzon — den ärliga frågan är alltså inte om Åre behåller sin vinter, utan hur långt upp på fjället man måste för att hitta den. Den här sidan går igenom sju klimatmodeller för att svara på det, och är tydlig med var siffrorna slutar vara tillförlitliga.',
+  },
+  'warm.pill.models': { en: '{n} of {total} models loaded', sv: '{n} av {total} modeller inlästa' },
+  'warm.pill.span': { en: 'Daily data {from}–{to}', sv: 'Dygnsdata {from}–{to}' },
+  'warm.pill.scenario': { en: 'One scenario only: {scenario}', sv: 'Endast ett scenario: {scenario}' },
+  'warm.noData': { en: 'No climate model answered. The page needs a connection the first time it is opened.', sv: 'Ingen klimatmodell svarade. Sidan behöver en uppkoppling första gången den öppnas.' },
+
+  'warm.verdict.title': { en: 'The short answer, by height', sv: 'Det korta svaret, höjd för höjd' },
+  'warm.verdict.sub': {
+    en: 'Modelled days per winter with at least 30 cm of snow on the ground — the ski industry’s usual test of whether a season exists at all. Compared between the current standard climate period and the last twenty years the models cover.',
+    sv: 'Modellerade dygn per vinter med minst 30 cm snö på marken — skidbranschens gängse test på om det över huvud taget finns en säsong. Jämförelsen görs mellan gällande klimatnormalperiod och de sista tjugo åren som modellerna täcker.',
+  },
+  'warm.verdict.by': { en: 'projected for {from}–{to}', sv: 'beräknat för {from}–{to}' },
+  'warm.verdict.change': { en: 'was {present} in 1991–2020 · {delta}', sv: 'var {present} åren 1991–2020 · {delta}' },
+  'warm.verdict.note': {
+    en: 'The test is {depth} cm of cover on {days} days or more. On that measure the season currently holds {nowLine}; by 2031–2050 it holds {laterLine}.',
+    sv: 'Testet är {depth} cm snötäcke under minst {days} dygn. Mätt så håller säsongen i dag {nowLine}; till 2031–2050 håller den {laterLine}.',
+  },
+  'warm.atHeight': { en: 'At {z} m', sv: 'På {z} m' },
+  'warm.line.none': { en: 'nowhere on the mountain', sv: 'ingenstans på fjället' },
+  'warm.line.all': { en: 'all the way down to the valley', sv: 'hela vägen ned till dalen' },
+  'warm.line.above': { en: 'only above {z} m', sv: 'bara ovanför {z} m' },
+  'warm.tag.holds': { en: 'Still holds', sv: 'Håller fortfarande' },
+  'warm.tag.fading': { en: 'Loses the test', sv: 'Klarar inte testet' },
+  'warm.tag.gone': { en: 'Already short', sv: 'Redan för kort' },
+
+  'warm.unit.days': { en: 'days', sv: 'dygn' },
+  'warm.unit.daysShort': { en: 'd', sv: 'd' },
+  'warm.unit.nights': { en: 'nights', sv: 'nätter' },
+
+  'warm.stair.title': { en: 'The snow line, walking uphill', sv: 'Snögränsen vandrar uppåt' },
+  'warm.stair.sub': {
+    en: 'The same measure at every 200 m, for three periods. The gap between the top row and the bottom row is the whole story.',
+    sv: 'Samma mått för varje 200 m, under tre perioder. Avståndet mellan översta och nedersta raden är hela poängen.',
+  },
+  'warm.stair.pick': { en: 'Measure', sv: 'Mått' },
+  'warm.metric.cover': { en: 'Season length', sv: 'Säsongslängd' },
+  'warm.metric.freeze': { en: 'Days below freezing', sv: 'Dygn under noll' },
+  'warm.metric.thaw': { en: 'Midwinter thaws', sv: 'Blidväder mitt i vintern' },
+  'warm.metric.making': { en: 'Snowmaking nights', sv: 'Snöläggningsnätter' },
+
+  'warm.metric.coverDays.label': { en: 'Days per winter with at least 30 cm of modelled snow cover, by elevation', sv: 'Dygn per vinter med minst 30 cm modellerat snötäcke, per höjd' },
+  'warm.metric.coverDays.note': {
+    en: 'Modelled here, not by the climate models: snowfall accumulates and melts back at 3.5 mm of water per degree per day, converted to depth at a settled density of 300 kg/m³. It moves the right way and by roughly the right amount; it is not a measurement.',
+    sv: 'Modellerat här, inte av klimatmodellerna: snöfall byggs på och smälter av med 3,5 mm vatten per grad och dygn, omräknat till djup vid en sättningsdensitet på 300 kg/m³. Måttet rör sig åt rätt håll och ungefär rätt mycket, men är ingen mätning.',
+  },
+  'warm.metric.freezeDays.label': { en: 'Days per winter with a mean temperature below zero, by elevation', sv: 'Dygn per vinter med medeltemperatur under noll, per höjd' },
+  'warm.metric.freezeDays.note': {
+    en: 'This one comes straight out of the models with nothing but a lapse rate applied, which makes it the most trustworthy number on the page. It is also the bluntest: a frozen mountain with no precipitation is still a bad season.',
+    sv: 'Det här måttet kommer direkt ur modellerna, med inget annat än en temperaturgradient pålagd, och är därför sidans mest tillförlitliga siffra. Det är också det trubbigaste: ett fruset fjäll utan nederbörd är ändå en dålig säsong.',
+  },
+  'warm.metric.thawDays.label': { en: 'Days from December to March above +2 °C, by elevation', sv: 'Dygn december till mars över +2 °C, per höjd' },
+  'warm.metric.thawDays.note': {
+    en: 'A thaw in the heart of winter is what turns a snowpack into a crust and a ski track into ice. This counts days whose maximum passes +2 °C between December and March — the ones that do real damage rather than the marginal ones.',
+    sv: 'Blidväder mitt i vintern är det som gör snötäcket till skare och spåret till is. Här räknas dygn där maximitemperaturen passerar +2 °C mellan december och mars — de som gör verklig skada, inte de marginella.',
+  },
+  'warm.metric.snowmakingNights.label': { en: 'Nights from November to March with a wet-bulb temperature at or below −2 °C, by elevation', sv: 'Nätter november till mars med våttemperatur på högst −2 °C, per höjd' },
+  'warm.metric.snowmakingNights.note': {
+    en: 'Snow guns run on wet-bulb temperature, not air temperature: dry air lets them work several degrees warmer than the thermometer suggests. The count uses the night minimum with the daily mean humidity, which is an approximation in the resort’s favour.',
+    sv: 'Snökanoner styrs av våttemperaturen, inte lufttemperaturen: torr luft låter dem arbeta flera grader varmare än termometern antyder. Beräkningen använder nattens minimitemperatur med dygnets medelluftfuktighet, vilket är en approximation till anläggningens fördel.',
+  },
+  'warm.threshold.reliable': { en: '{days} days', sv: '{days} dygn' },
+
+  'warm.period.past': { en: '1961–1990', sv: '1961–1990' },
+  'warm.period.present': { en: '1991–2020', sv: '1991–2020' },
+  'warm.period.future': { en: '2031–2050', sv: '2031–2050' },
+
+  'warm.trend.title': { en: 'A century, one winter at a time', sv: 'Ett sekel, en vinter i taget' },
+  'warm.trend.sub': {
+    en: 'Observed record in blue, the model median in violet, and the full spread across the seven models behind it. Pick the height you care about.',
+    sv: 'Uppmätt serie i blått, modellernas median i violett och hela spridningen mellan de sju modellerna bakom. Välj den höjd du bryr dig om.',
+  },
+  'warm.trend.pick': { en: 'Elevation', sv: 'Höjd' },
+  'warm.trend.label': { en: 'Winter by winter at {z} m, 1950 to 2050', sv: 'Vinter för vinter på {z} m, 1950 till 2050' },
+  'warm.trend.note': {
+    en: 'At {z} m, across {n} models. The year-to-year swing is larger than the trend over any short run of winters — which is exactly why a single deep winter settles nothing, in either direction.',
+    sv: 'På {z} m, över {n} modeller. Variationen mellan enskilda år är större än trenden över några få vintrar — och det är just därför en enda snörik vinter inte avgör något, åt något håll.',
+  },
+  'warm.chart.projected': { en: 'projection →', sv: 'projektion →' },
+  'warm.key.observed': { en: 'Observed (ERA5)', sv: 'Uppmätt (ERA5)' },
+  'warm.key.models': { en: 'Model median', sv: 'Modellernas median' },
+  'warm.key.spread': { en: 'Spread across models', sv: 'Spridning mellan modeller' },
+
+  'warm.fact.observedWarming': { en: 'Observed warming', sv: 'Uppmätt uppvärmning' },
+  'warm.fact.perDecade': { en: 'per decade in winter mean, {from}–{to}', sv: 'per årtionde i vinterns medeltemperatur, {from}–{to}' },
+  'warm.fact.rate': { en: 'Current rate', sv: 'Nuvarande takt' },
+  'warm.fact.sinceDecade': { en: 'per decade, modelled from 1990', sv: 'per årtionde, modellerat från 1990' },
+
+  'warm.making.title': { en: 'The snowmaking window', sv: 'Fönstret för snöläggning' },
+  'warm.making.sub': {
+    en: 'Nights between November and March cold enough to run a snow gun — a wet-bulb temperature of −2 °C or below. Whether a resort opens for Christmas is decided by this number long before it is decided by snowfall.',
+    sv: 'Nätter mellan november och mars som är kalla nog för snökanon — en våttemperatur på −2 °C eller lägre. Om en anläggning öppnar till jul avgörs av den här siffran långt innan det avgörs av snöfallet.',
+  },
+  'warm.making.label': { en: 'Nights cold enough to make snow, by elevation and period', sv: 'Nätter kalla nog för snöläggning, per höjd och period' },
+  'warm.making.note': {
+    en: 'At {z} m the window goes from about {present} nights to about {future}. That is the number to watch: it is what stands between a warmer climate and an opening date, and a wet-bulb threshold of {wb} °C is generous — colder is faster and cheaper.',
+    sv: 'På {z} m går fönstret från omkring {present} nätter till omkring {future}. Det är siffran att hålla ögonen på: den står mellan ett varmare klimat och ett öppningsdatum, och en våttemperaturgräns på {wb} °C är generöst tilltagen — kallare går fortare och billigare.',
+  },
+  'warm.making.noteShort': { en: 'Counted at a wet-bulb threshold of {wb} °C, which is a generous reading of what a modern gun can do.', sv: 'Räknat vid en våttemperaturgräns på {wb} °C, vilket är en generös bedömning av vad en modern kanon klarar.' },
+
+  'warm.summer.title': { en: 'The other half of the year', sv: 'Årets andra halva' },
+  'warm.summer.sub': {
+    en: 'A shorter winter is a longer everything else. This is not a consolation, but it is real, and it is what the same models say about the seasons this site scores for running, hiking and riding.',
+    sv: 'En kortare vinter är ett längre allt annat. Det är ingen tröst, men det är verkligt, och det är vad samma modeller säger om de säsonger den här sajten poängsätter för löpning, vandring och cykel.',
+  },
+  'warm.summer.frostFree': { en: 'Snow-free days', sv: 'Snöfria dygn' },
+  'warm.summer.frostFreeNote': { en: 'more days above freezing by 2031–2050 — a longer running and riding season', sv: 'fler dygn över noll till 2031–2050 — längre säsong för löpning och cykel' },
+  'warm.summer.thaws': { en: 'Midwinter thaws', sv: 'Blidväder mitt i vintern' },
+  'warm.summer.thawsNote': { en: 'change in days above +2 °C between December and March', sv: 'förändring i antal dygn över +2 °C mellan december och mars' },
+  'warm.summer.share': { en: 'Precipitation as snow', sv: 'Nederbörd som snö' },
+  'warm.summer.shareNote': { en: 'change in the share of the year’s precipitation falling as snow', sv: 'förändring i hur stor andel av årsnederbörden som faller som snö' },
+  'warm.summer.snowfall': { en: 'Snowfall', sv: 'Snöfall' },
+  'warm.summer.snowfallNote': { en: 'change in total new snow per winter at this height', sv: 'förändring i total nysnö per vinter på den här höjden' },
+
+  'warm.status.loading': { en: 'Reading model {n} of {total}…', sv: 'Läser modell {n} av {total}…' },
+  'warm.status.partial': { en: '{n} of {total} models answered', sv: '{n} av {total} modeller svarade' },
+  'warm.status.ready': { en: '{n} models · {age}', sv: '{n} modeller · {age}' },
+
+  'warm.caveats.title': { en: 'What these numbers can and cannot tell you', sv: 'Vad de här siffrorna kan och inte kan säga' },
+  'warm.caveat.1.t': { en: 'One scenario, not a range of futures.', sv: 'Ett scenario, inte ett spann av framtider.' },
+  'warm.caveat.1.b': {
+    en: 'The high-resolution models here were only run under SSP5-8.5, a high-emissions pathway. Out to 2050 that matters less than it sounds: the pathways barely separate before mid-century, because the warming to then is largely already committed. For 2090 it would matter enormously — which is why nothing on this page is extrapolated past the end of the data.',
+    sv: 'De högupplösta modellerna här kördes bara under SSP5-8.5, en bana med höga utsläpp. Fram till 2050 spelar det mindre roll än det låter: banorna skiljer sig knappt åt före mitten av seklet, eftersom uppvärmningen dit i allt väsentligt redan är bestämd. För 2090 skulle det spela enormt stor roll — och därför extrapoleras ingenting på den här sidan bortom datamängdens slut.',
+  },
+  'warm.caveat.2.t': { en: 'The data stops in 2050.', sv: 'Datamängden slutar 2050.' },
+  'warm.caveat.2.b': {
+    en: 'Every figure here ends there. If you want a date for the last skiable winter, this page will not give you one, because the honest answer depends on emissions between now and then.',
+    sv: 'Alla siffror här tar slut där. Vill du ha ett årtal för den sista åkbara vintern kommer den här sidan inte att ge dig ett, eftersom det ärliga svaret beror på utsläppen fram till dess.',
+  },
+  'warm.caveat.3.t': { en: 'A 25 km model cannot see a mountain.', sv: 'En modell med 25 km rutnät ser inget fjäll.' },
+  'warm.caveat.3.b': {
+    en: 'These grid cells are wider than the distance from Åre to Storlien. The whole massif is read at one point and moved to each elevation with the same lapse rate the forecast uses. That captures the height dependence, which is the dominant effect, and nothing about aspect, shading, wind scouring or which side of the ridge you are on.',
+    sv: 'Rutorna är bredare än avståndet mellan Åre och Storlien. Hela massivet läses av i en enda punkt och flyttas till varje höjd med samma temperaturgradient som prognosen använder. Det fångar höjdberoendet, som är den dominerande effekten, och ingenting om väderstreck, skuggning, vindavblåsning eller vilken sida av ryggen du står på.',
+  },
+  'warm.caveat.4.t': { en: 'The snowpack is modelled here, not by the climate models.', sv: 'Snötäcket modelleras här, inte av klimatmodellerna.' },
+  'warm.caveat.4.b': {
+    en: 'The climate data carries snowfall but not snow depth, so season length and the 30 cm figures come from a degree-day model written for this page: accumulate what falls as snow, melt it back at a fixed rate per degree above freezing. It has no wind redistribution, no rain percolating and refreezing, and no snowmaking. Treat those numbers as an index that moves the right way, not as a measurement.',
+    sv: 'Klimatdata innehåller snöfall men inte snödjup, så säsongslängden och siffrorna kring 30 cm kommer från en graddagsmodell skriven för den här sidan: lägg på det som faller som snö, smält av med en fast takt per grad över noll. Den saknar vindtransport, regn som tränger ned och återfryser, och snöläggning. Betrakta siffrorna som ett index som rör sig åt rätt håll, inte som en mätning.',
+  },
+  'warm.caveat.5.t': { en: 'Snowmaking is not in any of this.', sv: 'Snöläggning ingår inte i något av det här.' },
+  'warm.caveat.5.b': {
+    en: 'Every modern resort in this region makes a large part of its base. The snowmaking panel counts whether the weather allows it; it says nothing about whether SkiStar chooses to, what it costs, or whether the water is there. A resort will keep a season open long after the natural snowpack stops delivering one.',
+    sv: 'Alla moderna anläggningar i regionen lägger en stor del av sitt underlag. Panelen för snöläggning räknar om vädret tillåter det; den säger ingenting om huruvida SkiStar väljer att göra det, vad det kostar eller om vattnet räcker. En anläggning håller en säsong öppen långt efter att den naturliga snön slutat leverera en.',
+  },
+  'warm.caveat.6.t': { en: 'Model spread is not the same as uncertainty.', sv: 'Spridning mellan modeller är inte samma sak som osäkerhet.' },
+  'warm.caveat.6.b': {
+    en: 'The band on the charts is the disagreement between seven models. Real uncertainty is wider: it also includes what the models all get wrong together, and the year-to-year variability that means any individual winter can land far outside the trend. A bad winter inside a warming trend is not evidence against it, and a deep one is not evidence for the opposite.',
+    sv: 'Bandet i diagrammen är oenigheten mellan sju modeller. Den verkliga osäkerheten är vidare: den rymmer också det som alla modeller har fel om tillsammans, och den mellanårsvariation som gör att en enskild vinter kan hamna långt utanför trenden. En dålig vinter inuti en uppvärmningstrend är inget motbevis, och en snörik är inget bevis för motsatsen.',
+  },
+  'warm.caveats.foot': {
+    en: 'Thresholds, the melt factor and the assumed snowpack density are all listed on the <a href="methods.html#warming">method page</a> and can be argued with there.',
+    sv: 'Gränsvärden, smältfaktorn och den antagna snödensiteten står alla på <a href="methods.html#warming">metodsidan</a> och går att invända mot där.',
+  },
+  'warm.footer': {
+    en: 'Climate projections from the CMIP6 HighResMIP ensemble, served by <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> and bias-corrected against ERA5. This page is one reading of public data by an enthusiast, not a scientific assessment. For Sweden’s official climate analysis, see <a href="https://www.smhi.se/klimat" target="_blank" rel="noopener">SMHI</a>.',
+    sv: 'Klimatprojektioner från CMIP6 HighResMIP-ensemblen, levererade av <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> och biaskorrigerade mot ERA5. Den här sidan är en entusiasts läsning av offentliga data, inte en vetenskaplig bedömning. För Sveriges officiella klimatanalys, se <a href="https://www.smhi.se/klimat" target="_blank" rel="noopener">SMHI</a>.',
   },
 
 };

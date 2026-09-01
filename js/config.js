@@ -178,6 +178,68 @@ export const ENDPOINTS = {
   ensemble: 'https://ensemble-api.open-meteo.com/v1/ensemble',
   history: 'https://historical-forecast-api.open-meteo.com/v1/forecast',
   archive: 'https://archive-api.open-meteo.com/v1/archive',
+  climate: 'https://climate-api.open-meteo.com/v1/climate',
+};
+
+/* ---------------------------------------------------------------------------
+   Climate projections.
+
+   Seven CMIP6 HighResMIP models, daily, 1950-2050, statistically downscaled to
+   10 km and bias-corrected against ERA5 by Open-Meteo. These are the coarsest
+   data on the site by a wide margin: a 25 km grid cell cannot tell Åreskutan
+   from Ottfjället, so the warming page uses one point for the whole massif and
+   makes elevation the variable instead of the peak.
+   --------------------------------------------------------------------------- */
+export const CLIMATE_MODELS = [
+  { key: 'EC_Earth3P_HR', org: 'EC-Earth Consortium', country: 'Europe', km: 29 },
+  { key: 'MRI_AGCM3_2_S', org: 'Meteorological Research Institute', country: 'Japan', km: 20 },
+  { key: 'HiRAM_SIT_HR', org: 'AS-RCEC', country: 'Taiwan', km: 25 },
+  { key: 'CMCC_CM2_VHR4', org: 'CMCC', country: 'Italy', km: 30 },
+  { key: 'FGOALS_f3_H', org: 'Chinese Academy of Sciences', country: 'China', km: 28 },
+  { key: 'NICAM16_8S', org: 'MIROC / NICAM', country: 'Japan', km: 31 },
+  { key: 'MPI_ESM1_2_XR', org: 'Max Planck Institute for Meteorology', country: 'Germany', km: 51 },
+];
+
+/* ---------------------------------------------------------------------------
+   Winter metrics.
+
+   The thresholds the warming page counts against. They are here rather than in
+   the code because every one of them is a judgement call that a reader is
+   entitled to disagree with, and the method page prints them.
+   --------------------------------------------------------------------------- */
+export const WARMING = {
+  /** the point the whole massif is read at — a 25 km cell resolves nothing finer */
+  anchor: { id: 'areskutan', lat: 63.4262, lon: 13.0665 },
+  /** elevation bands the projection is downscaled to (m) */
+  bands: [400, 600, 800, 1000, 1200, 1420],
+  /** first year of model data, and the last */
+  from: 1950,
+  to: 2050,
+  /** the three windows the page compares, the middle one being the WMO normal */
+  periods: [
+    { id: 'past', from: 1961, to: 1990 },
+    { id: 'present', from: 1991, to: 2020 },
+    { id: 'future', from: 2031, to: 2050 },
+  ],
+  /** a winter year runs July to June, so one winter is never split in two */
+  yearStartMonth: 7,
+  /** midwinter, for counting thaws */
+  coreWinter: { fromMonth: 12, toMonth: 3 },
+  /** the season snowmaking can run in */
+  makingSeason: { fromMonth: 11, toMonth: 3 },
+  /** wet-bulb at or below which a snow gun can run (°C) */
+  snowmakingWetBulb: -2,
+  /** a midwinter day warmer than this counts as a thaw (°C max) */
+  thawAbove: 2,
+  /** degree-day melt factor (mm water equivalent per °C per day) */
+  meltFactor: 3.5,
+  /** settled snowpack density (kg/m³) used to turn water equivalent into depth */
+  packDensity: 300,
+  /** the classic snow-reliability test: this depth (cm), this many days */
+  reliableDepth: 30,
+  reliableDays: 100,
+  /** a run of this many days below freezing opens or closes the season */
+  runLength: 5,
 };
 
 /* Physical / empirical tunables, gathered in one place so they can be
@@ -631,6 +693,22 @@ export const SOURCES = {
     note: {
       en: 'Used as the training target for the bias correction, never shown as a forecast.',
       sv: 'Används som facit vid träning av biaskorrigeringen, visas aldrig som prognos.',
+    },
+  },
+  projection: {
+    name: 'CMIP6 HighResMIP',
+    org: {
+      en: 'Seven modelling centres, via Open-Meteo',
+      sv: 'Sju modellcentra, via Open-Meteo',
+    },
+    scenario: 'SSP5-8.5',
+    licence: 'CC BY 4.0',
+    credit: 'CMIP6 model data, WCRP Coupled Model Intercomparison Project Phase 6',
+    url: 'https://open-meteo.com/en/docs/climate-api',
+    licenceUrl: 'https://pcmdi.llnl.gov/CMIP6/TermsOfUse/TermsOfUse6-1.html',
+    note: {
+      en: 'Historical runs 1950–2014, projections 2015–2050 under SSP5-8.5. Downscaled to 10 km and bias-corrected against ERA5 by Open-Meteo.',
+      sv: 'Historiska körningar 1950–2014, projektioner 2015–2050 enligt SSP5-8.5. Nedskalade till 10 km och biaskorrigerade mot ERA5 av Open-Meteo.',
     },
   },
   fonts: [
