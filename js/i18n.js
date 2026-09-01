@@ -1520,8 +1520,15 @@ export const STRINGS = {
   'warm.pill.models': { en: '{n} of {total} models loaded', sv: '{n} av {total} modeller inlästa' },
   'warm.pill.span': { en: 'Daily data {from}–{to}', sv: 'Dygnsdata {from}–{to}' },
   'warm.pill.scenario': { en: 'One scenario only: {scenario}', sv: 'Endast ett scenario: {scenario}' },
-  'warm.noData': { en: 'No climate model answered. The page needs a connection the first time it is opened.', sv: 'Ingen klimatmodell svarade. Sidan behöver en uppkoppling första gången den öppnas.' },
+  'warm.noData': { en: 'No climate model answered, so there is nothing here to show.', sv: 'Ingen klimatmodell svarade, så det finns inget att visa här.' },
+  'warm.noData.offline': { en: 'The page needs a connection the first time it is opened.', sv: 'Sidan behöver en uppkoppling första gången den öppnas.' },
 
+  'warm.noData.why': { en: 'The climate API said: “{reason}”.', sv: 'Klimat-API:et svarade: ”{reason}”.' },
+  'warm.status.failed': { en: 'Climate data unavailable', sv: 'Klimatdata saknas' },
+  'warm.cacheFull': {
+    en: 'Browser storage is full, so this page will fetch it all again next time. Clearing this site’s data will fix that.',
+    sv: 'Webbläsarens lagring är full, så sidan hämtar allt igen nästa gång. Att rensa sajtens data löser det.',
+  },
   'warm.verdict.title': { en: 'The short answer, by height', sv: 'Det korta svaret, höjd för höjd' },
   'warm.verdict.sub': {
     en: 'Modelled days per winter with at least 30 cm of snow on the ground — the ski industry’s usual test of whether a season exists at all. Compared between the current standard climate period and the last twenty years the models cover.',

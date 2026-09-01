@@ -58,7 +58,7 @@ function cached(key, ttl) {
   return { ...hit, age, fresh: age < ttl };
 }
 function keep(key, data) {
-  store.set(`${NS}.${key}`, { t: Date.now(), data });
+  return store.set(`${NS}.${key}`, { t: Date.now(), data });
 }
 
 /**
@@ -261,41 +261,125 @@ export async function fetchClimate(mtn, { force = false, years = 30 } = {}) {
 
 /** Daily variables the warming page needs, in the order they are given up. */
 const CLIMATE_VARS = ['temperature_2m_max', 'temperature_2m_min', 'precipitation_sum', 'relative_humidity_2m_mean'];
+const CLIMATE_CORE = ['temperature_2m_max', 'temperature_2m_min', 'precipitation_sum'];
+
+/** Concatenate several daily responses, in order, into one. */
+function mergeDaily(parts) {
+  const good = parts.filter((p) => p?.daily?.time?.length);
+  if (!good.length) return null;
+  const keys = [...new Set(good.flatMap((p) => Object.keys(p.daily)))];
+  const daily = Object.fromEntries(keys.map((k) => [k, []]));
+  for (const part of good) {
+    const n = part.daily.time.length;
+    for (const k of keys) {
+      const col = part.daily[k];
+      /* a slice missing a column is padded, so every column stays aligned
+         with `time` rather than silently shifting by a few years */
+      daily[k].push(...(Array.isArray(col) && col.length === n ? col : new Array(n).fill(null)));
+    }
+  }
+  return { ...good[0], daily };
+}
+
+/**
+ * Once the API says we are over a limit, stop asking.
+ *
+ * The free tier this site runs on is a courtesy, and seven models × five
+ * fallback variants is exactly the sort of retry storm that gets an anonymous
+ * caller blocked. One refusal of this kind ends the run for the whole page.
+ */
+let rateLimited = null;
+const LIMIT_HINT = /limit|quota|too many|429/i;
+export const climateLimit = () => rateLimited;
+export function clearClimateLimit() { rateLimited = null; }
+
+/** [from, to] year ranges covering a span, `years` at a time. */
+function slices(from, to, years) {
+  const out = [];
+  for (let y = from; y <= to; y += years) out.push([y, Math.min(to, y + years - 1)]);
+  return out;
+}
+
+/**
+ * A long daily series, fetched in slices and stitched back together.
+ *
+ * A century of daily values in one request is a large ask, and a request that
+ * is refused for its size is refused identically however many times it is
+ * retried. Splitting the span is the one fallback that changes the shape of
+ * the question rather than just asking it again more quietly.
+ */
+async function fetchSpanInSlices(endpoint, base, vars, from, to, years, timeout) {
+  const parts = [];
+  for (const [a, b] of slices(from, to, years)) {
+    const params = { ...base, daily: vars, start_date: `${a}-01-01`, end_date: `${b}-12-31` };
+    parts.push(await getJSON(`${endpoint}?${qs(params)}`, timeout));
+  }
+  const merged = mergeDaily(parts);
+  if (!merged) throw new ApiError('no slice returned any data');
+  return merged;
+}
+
+/**
+ * Try a long daily request several genuinely different ways.
+ *
+ * The ladder matters: dropping a variable and slicing the span fail for
+ * different reasons, so a ladder that only ever drops variables would retry the
+ * same rejection three times. The last error is kept and handed back, because a
+ * page that cannot say why it is empty is no better than a blank one.
+ */
+async function fetchLongDaily(endpoint, base, { from, to, timeout = 90000 }) {
+  /* `small` marks an attempt whose requests are modest. A limit error on one of
+     those means we really are over the allowance and should stop; the same error
+     on the full-span request only means the request was too big, and slicing is
+     the answer rather than giving up. */
+  const attempts = [
+    { small: false, run: () => getJSON(`${endpoint}?${qs({ ...base, daily: CLIMATE_VARS, start_date: `${from}-01-01`, end_date: `${to}-12-31` })}`, timeout) },
+    { small: false, run: () => getJSON(`${endpoint}?${qs({ ...base, daily: CLIMATE_CORE, start_date: `${from}-01-01`, end_date: `${to}-12-31` })}`, timeout) },
+    { small: true, run: () => fetchSpanInSlices(endpoint, base, CLIMATE_VARS, from, to, 20, timeout) },
+    { small: true, run: () => fetchSpanInSlices(endpoint, base, CLIMATE_CORE, from, to, 20, timeout) },
+    { small: true, run: () => fetchSpanInSlices(endpoint, base, CLIMATE_CORE, from, to, 10, timeout) },
+  ];
+  if (rateLimited) throw new ApiError(rateLimited);
+  let last;
+  for (const attempt of attempts) {
+    try {
+      const data = await attempt.run();
+      if (data?.daily?.time?.length) return data;
+      last = new ApiError('empty response');
+    } catch (err) {
+      last = err;
+      if (attempt.small && LIMIT_HINT.test(err?.message ?? '')) {
+        rateLimited = err.message;
+        throw err;
+      }
+    }
+  }
+  throw last ?? new ApiError('no variant succeeded');
+}
 
 /**
  * One CMIP6 model, a century of daily values, for the massif anchor point.
  *
- * This is a megabyte or so per model, which is why it is fetched one model at a
- * time rather than all seven in a single request: the page can render as each
- * arrives, and a slow connection gets a partial answer instead of nothing. The
- * caller summarises the response and calls `keepProjection` with the few hundred
- * numbers that survive, so the raw century is never written to storage.
- *
+ * The caller summarises the response and calls `keepProjection` with the few
+ * hundred numbers that survive, so the raw century is never written to storage.
  * A projection of 1950-2050 does not change from week to week, so the summary
  * is treated as good for half a year.
  */
 export async function fetchProjection(modelKey, { force = false } = {}) {
-  const key = `projection.${modelKey}.v1`;
+  const key = `projection.${modelKey}.v2`;
   const hit = cached(key, TTL.projection);
   if (hit && hit.fresh && !force) return { data: hit.data, cachedAt: hit.t, stale: false };
 
   const base = {
     latitude: WARMING.anchor.lat,
     longitude: WARMING.anchor.lon,
-    start_date: `${WARMING.from}-01-01`,
-    end_date: `${WARMING.to}-12-31`,
     temperature_unit: 'celsius',
     precipitation_unit: 'mm',
-    wind_speed_unit: 'ms',
     models: modelKey,
   };
   try {
-    const { data } = await tryVariants(ENDPOINTS.climate, [
-      { ...base, daily: CLIMATE_VARS },
-      { ...base, daily: CLIMATE_VARS.slice(0, 3) },
-      { ...base, daily: CLIMATE_VARS.slice(0, 2) },
-    ], 90000);
-    return { data: { raw: data, model: modelKey }, cachedAt: Date.now(), stale: false };
+    const raw = await fetchLongDaily(ENDPOINTS.climate, base, { from: WARMING.from, to: WARMING.to });
+    return { data: { raw, model: modelKey }, cachedAt: Date.now(), stale: false };
   } catch (err) {
     if (hit) return { data: hit.data, cachedAt: hit.t, stale: true, error: err };
     throw err;
@@ -304,7 +388,7 @@ export async function fetchProjection(modelKey, { force = false } = {}) {
 
 /** Store the summarised projection, so the raw century never has to be kept. */
 export function keepProjection(modelKey, summary) {
-  keep(`projection.${modelKey}.v1`, summary);
+  return keep(`projection.${modelKey}.v2`, summary);
 }
 
 /**
@@ -312,7 +396,7 @@ export function keepProjection(modelKey, summary) {
  * against which the models' own historical runs can be read.
  */
 export async function fetchObserved({ force = false } = {}) {
-  const key = 'projection.observed.v1';
+  const key = 'projection.observed.v2';
   const hit = cached(key, TTL.projection);
   if (hit && hit.fresh && !force) return { data: hit.data, cachedAt: hit.t, stale: false };
 
@@ -320,17 +404,14 @@ export async function fetchObserved({ force = false } = {}) {
     ...COMMON,
     latitude: WARMING.anchor.lat,
     longitude: WARMING.anchor.lon,
-    start_date: `${WARMING.from}-01-01`,
-    end_date: isoDate(daysAgo(7)),
-    daily: CLIMATE_VARS,
     models: 'era5',
   };
+  /* ERA5 only reaches the day before yesterday, so the span stops at last year
+     rather than asking the archive for a year it cannot finish. */
+  const to = new Date().getFullYear() - 1;
   try {
-    const { data } = await tryVariants(ENDPOINTS.archive, [
-      base,
-      { ...base, daily: CLIMATE_VARS.slice(0, 3) },
-    ], 90000);
-    return { data: { raw: data, model: 'era5' }, cachedAt: Date.now(), stale: false };
+    const raw = await fetchLongDaily(ENDPOINTS.archive, base, { from: WARMING.from, to });
+    return { data: { raw, model: 'era5' }, cachedAt: Date.now(), stale: false };
   } catch (err) {
     if (hit) return { data: hit.data, cachedAt: hit.t, stale: true, error: err };
     throw err;
@@ -339,7 +420,22 @@ export async function fetchObserved({ force = false } = {}) {
 
 /** Store the summarised observed record. */
 export function keepObserved(summary) {
-  keep('projection.observed.v1', summary);
+  return keep('projection.observed.v2', summary);
+}
+
+/**
+ * Drop the first-generation projection cache.
+ *
+ * The v1 entries stored the full winter records, which were large enough that
+ * writing them usually failed outright — but any that did land are dead weight
+ * against the same quota v2 needs, and nothing will ever read them again.
+ */
+export function forgetOldProjections() {
+  try {
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith(`${NS}.projection.`) && key.endsWith('.v1')) localStorage.removeItem(key);
+    }
+  } catch { /* private mode, or no storage at all */ }
 }
 
 /** Store the derived climatology, so the raw response never has to be kept. */

@@ -94,8 +94,8 @@ export function winters(series, elevation, { lapse = PHYS.fallbackLapse } = {}) 
   const drop = Number.isFinite(series.elevation) ? ((elevation - series.elevation) / 100) * lapse : 0;
   const out = new Map();
 
-  /* snowpack state, carried across the year boundary */
-  let pack = 0;
+  /* snowpack water equivalent (mm), carried across the year boundary */
+  let swe = 0;
   const reliable = reliableWaterEquivalent();
 
   for (let i = 0; i < series.time.length; i++) {
@@ -130,20 +130,20 @@ export function winters(series, elevation, { lapse = PHYS.fallbackLapse } = {}) 
       w.snowmakingNights++;
     }
 
-    /* phase, then the degree-day pack */
+    /* phase, then the degree-day snowpack */
     const tw = wetBulb(tmean, rh);
     const isSnow = Number.isFinite(tw) ? tw <= PHYS.snowBelow : tmean <= 0;
     if (isSnow && precip > 0) {
-      pack += precip;
+      swe += precip;
       w.snowWater += precip;
       w.snowfall += precip * snowRatio(tmean) / 10;   // mm water → cm of new snow
     }
     const melt = Math.max(0, tmean) * WARMING.meltFactor;
-    pack = Math.max(0, pack - melt);
+    swe = Math.max(0, swe - melt);
 
-    const depth = depthFromWater(pack);
+    const depth = depthFromWater(swe);
     if (depth > w.maxDepth) w.maxDepth = depth;
-    if (pack >= reliable) {
+    if (swe >= reliable) {
       w.coverDays++;
       if (!w.firstCover) w.firstCover = iso;
       w.lastCover = iso;
@@ -277,4 +277,43 @@ export function verdict(bands, metric = 'coverDays') {
       reliableLater: Number.isFinite(future) && future >= WARMING.reliableDays,
     };
   });
+}
+
+
+/* ---------- storage ----------
+   A full winter record is fifteen fields, and a century of them at six
+   elevations for seven models runs to megabytes — well past what localStorage
+   will accept, so the cache silently never worked. Only the metrics the page
+   actually reads are kept, as parallel arrays of rounded numbers, which is
+   roughly thirty times smaller and fits comfortably. */
+
+export const STORED_METRICS = ['coverDays', 'freezeDays', 'thawDays', 'snowmakingNights', 'snowfall', 'snowShare', 'tmeanWinter'];
+
+const r2 = (v) => (Number.isFinite(v) ? Math.round(v * 100) / 100 : null);
+
+/** Compact a per-band summary for storage. */
+export function pack(summary) {
+  if (!summary?.byBand) return null;
+  const bands = {};
+  for (const [z, rows] of Object.entries(summary.byBand)) {
+    if (!rows?.length) continue;
+    const band = { winters: rows.map((w) => w.winter) };
+    for (const m of STORED_METRICS) band[m] = rows.map((w) => r2(w[m]));
+    bands[z] = band;
+  }
+  return { v: 2, elevation: summary.elevation, bands };
+}
+
+/** Rebuild what `pack` kept. Anything it dropped comes back missing, not wrong. */
+export function unpack(packed) {
+  if (packed?.v !== 2 || !packed.bands) return null;
+  const byBand = {};
+  for (const [z, band] of Object.entries(packed.bands)) {
+    byBand[z] = band.winters.map((winter, i) => {
+      const row = { winter };
+      for (const m of STORED_METRICS) row[m] = Number.isFinite(band[m]?.[i]) ? band[m][i] : NaN;
+      return row;
+    });
+  }
+  return { elevation: packed.elevation, byBand };
 }

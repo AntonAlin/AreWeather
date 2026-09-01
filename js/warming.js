@@ -11,9 +11,9 @@
  */
 
 import { CLIMATE_MODELS, WARMING, SOURCES } from './config.js';
-import { fetchProjection, keepProjection, fetchObserved, keepObserved } from './api.js';
+import { fetchProjection, keepProjection, fetchObserved, keepObserved, forgetOldProjections } from './api.js';
 import {
-  extract, winters, ensemble, overPeriod, trend, staircase, verdict, reliabilityLine,
+  extract, winters, ensemble, overPeriod, trend, staircase, verdict, reliabilityLine, pack, unpack,
 } from './projection.js';
 import { renderWarmingTrend, renderStaircase } from './charts.js';
 import { setStatus } from './ui.js';
@@ -26,6 +26,9 @@ const state = {
   observed: null,
   loaded: 0,
   failed: 0,
+  /** what the API actually said, so an empty page can explain itself */
+  errors: [],
+  cacheFull: false,
   cachedAt: null,
   metric: 'coverDays',
   band: 1000,
@@ -42,19 +45,28 @@ function summarise(raw, modelKey) {
   return { elevation: series.elevation, byBand };
 }
 
-/** A summary that came back from cache is already in its reduced form. */
-const asSummary = (data, modelKey) => (data?.byBand ? data : summarise(data?.raw, modelKey));
+/** A cached entry is already packed; a fresh one still has its raw century. */
+const asSummary = (data, modelKey) => (data?.raw ? summarise(data.raw, modelKey) : unpack(data));
+
+/** Note a failure with the reason the API gave, not just that it happened. */
+function fail(who, err) {
+  const why = err?.message || String(err) || 'unknown error';
+  state.errors.push(`${who}: ${why}`);
+  state.failed++;
+}
 
 async function loadModel(m) {
   try {
-    const { data, cachedAt } = await fetchProjection(m.key);
+    const { data, cachedAt, error } = await fetchProjection(m.key);
     const summary = asSummary(data, m.key);
-    if (!summary) throw new Error('no usable series');
-    if (data?.raw) keepProjection(m.key, summary);
+    if (!summary) throw error ?? new Error('no usable series in the response');
+    /* Caching is best-effort: a full localStorage must not cost us the model
+       we just spent a megabyte fetching. */
+    if (data?.raw && !keepProjection(m.key, pack(summary))) state.cacheFull = true;
     state.models.set(m.key, summary);
     state.cachedAt = Math.min(state.cachedAt ?? Infinity, cachedAt);
-  } catch {
-    state.failed++;
+  } catch (err) {
+    fail(m.key, err);
   } finally {
     state.loaded++;
     render();
@@ -66,10 +78,13 @@ async function loadObserved() {
     const { data } = await fetchObserved();
     const summary = asSummary(data, 'era5');
     if (!summary) return;
-    if (data?.raw) keepObserved(summary);
+    if (data?.raw && !keepObserved(pack(summary))) state.cacheFull = true;
     state.observed = summary;
     render();
-  } catch { /* the projection still stands on its own */ }
+  } catch (err) {
+    /* The projection still stands on its own; the observed line just goes. */
+    state.errors.push(`ERA5: ${err?.message ?? err}`);
+  }
 }
 
 /** Two at a time: seven megabyte-scale responses in parallel help nobody. */
@@ -81,6 +96,7 @@ async function pool(items, limit, fn) {
 }
 
 async function loadAll() {
+  forgetOldProjections();
   render();
   await Promise.all([
     pool(CLIMATE_MODELS, 2, loadModel),
@@ -132,7 +148,16 @@ function renderVerdict() {
   const rows = verdict(bandsFor('coverDays'));
   const usable = rows.filter((r) => Number.isFinite(r.present));
   if (!usable.length) {
-    $('#verdict-note').textContent = state.loaded ? t('warm.noData') : '';
+    if (!state.loaded) { $('#verdict-note').textContent = ''; return; }
+    /* An empty page that cannot say why is a bug report nobody can file. */
+    const note = $('#verdict-note');
+    note.textContent = '';
+    el('span', { text: t('warm.noData') }, note);
+    const reason = state.errors[0]?.replace(/^[^:]+: /, '');
+    el('span', {
+      class: 'why',
+      text: reason ? t('warm.noData.why', { reason }) : t('warm.noData.offline'),
+    }, note);
     return;
   }
 
@@ -178,7 +203,9 @@ function renderStair() {
     unit: t(METRIC_UNITS[state.metric]),
     label: t(`warm.metric.${state.metric}.label`),
   });
-  $('#stair-note').textContent = t(`warm.metric.${state.metric}.note`);
+  const note = $('#stair-note');
+  note.textContent = t(`warm.metric.${state.metric}.note`);
+  if (state.cacheFull) el('span', { class: 'why', text: t('warm.cacheFull') }, note);
 }
 
 function renderTrend() {
@@ -292,7 +319,7 @@ function status() {
   if (state.loaded < CLIMATE_MODELS.length) {
     return setStatus('working', t('warm.status.loading', { n: state.loaded, total: CLIMATE_MODELS.length }));
   }
-  if (!state.models.size) return setStatus('error', t('status.noData'));
+  if (!state.models.size) return setStatus('error', t('warm.status.failed'));
   if (state.failed) return setStatus('stale', t('warm.status.partial', { n: state.models.size, total: CLIMATE_MODELS.length }));
   setStatus('live', t('warm.status.ready', { n: state.models.size, age: ago(state.cachedAt) }));
 }

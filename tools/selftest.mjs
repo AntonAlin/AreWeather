@@ -14,7 +14,7 @@ import { wetBulb, dewPoint, windChill, snowRatio, buildSounding, temperatureAt, 
 import { summarise, percentileOf, contextFor, unusualness, weekly, dayOfYear } from '../js/climate.js';
 import { STRINGS, LANGS } from '../js/i18n.js';
 import { WARMING, CLIMATE_MODELS } from '../js/config.js';
-import { extract, winters, ensemble, overPeriod, trend, staircase, verdict, reliabilityLine, winterYear, depthFromWater, reliableWaterEquivalent } from '../js/projection.js';
+import { extract, winters, ensemble, overPeriod, trend, staircase, verdict, reliabilityLine, winterYear, depthFromWater, reliableWaterEquivalent, pack, unpack, STORED_METRICS } from '../js/projection.js';
 import { round, mean } from '../js/util.js';
 import fs from 'node:fs';
 
@@ -667,6 +667,27 @@ console.log('\nClimate projections');
   ok(holed.every((w) => w.days >= 240), 'and every one it reports has most of a year behind it');
   const shortSeries = extract({ elevation: 700, daily: { time: ['2020-01-01', '2020-01-02'], temperature_2m_max: [1, 2], temperature_2m_min: [-1, 0], precipitation_sum: [0, 0], relative_humidity_2m_mean: [80, 80] } }, null);
   ok(winters(shortSeries, 700).length === 0, 'and two days is never reported as a winter');
+
+  /* storage: the full record is far too big for localStorage, so only what the
+     page reads is kept, and it has to survive the round trip intact */
+  const byBandFull = {};
+  for (const z of WARMING.bands) byBandFull[z] = winters(series, z);
+  const summary = { elevation: series.elevation, byBand: byBandFull };
+  const packed = pack(summary);
+  const fullBytes = JSON.stringify(summary).length;
+  const packedBytes = JSON.stringify(packed).length;
+  ok(packedBytes * 8 < 900e3, 'eight packed sources fit inside a localStorage quota', `${round(packedBytes * 8 / 1024)} KB`);
+  ok(packedBytes < fullBytes / 5, 'packing is at least five times smaller than the full record', `${round(fullBytes / 1024)} → ${round(packedBytes / 1024)} KB`);
+
+  const back = unpack(packed);
+  ok(back && Object.keys(back.byBand).length === WARMING.bands.length, 'every band survives the round trip');
+  const before = summary.byBand[1000];
+  const after = back.byBand[1000];
+  ok(before.length === after.length, 'and every winter with it');
+  ok(before.every((w, i) => w.winter === after[i].winter), 'in the same order');
+  ok(STORED_METRICS.every((m) => before.every((w, i) => !Number.isFinite(w[m]) || near(w[m], after[i][m], 0.01))),
+    'with every stored metric intact to two decimals');
+  ok(unpack(null) === null && unpack({ v: 1 }) === null, 'a cache entry from an older shape is rejected rather than misread');
 
   ok(CLIMATE_MODELS.length === 7 && new Set(CLIMATE_MODELS.map((m) => m.key)).size === 7, 'seven distinct climate models are configured');
   ok(WARMING.bands.every((z, i) => i === 0 || z > WARMING.bands[i - 1]), 'the bands are in order');
