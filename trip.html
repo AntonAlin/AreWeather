@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title data-i18n="page.trip.title">Plan a trip — ÅreWeather</title>
+<meta name="description" data-i18n-content="page.trip.description" content="Set your arrival and departure and get a day-by-day plan for the Åre fjäll: which peak, which sport, which hours, and what to pack.">
+<meta name="theme-color" content="#06080b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M6 82 38 26l17 29 9-14 24 41z' fill='%234fd1ff'/%3E%3Cpath d='M38 26l10 18-10 8-9-7z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip-link" href="#itinerary" data-i18n="nav.skipContent">Skip to the content</a>
+<div class="aurora" aria-hidden="true"><span class="a1"></span><span class="a2"></span><span class="a3"></span></div>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="./">
+      <svg class="brand-mark" viewBox="0 0 100 100" aria-hidden="true"><path d="M4 84 38 24l17 30 9-15 28 45z"/><path d="M38 24l10 18-10 9-9-8z" class="snow"/></svg>
+      <span class="brand-text">ÅRE<b>WEATHER</b><i data-i18n="brand.trip">plan a trip</i></span>
+    </a>
+    <div class="topbar-actions">
+      <div class="seg" id="lang-toggle" role="group" data-i18n-label="lang.group" aria-label="Language"></div>
+      <a class="nav-link" href="links.html" data-i18n="nav.links">Everything else</a>
+      <button type="button" class="status-pill" id="status-pill" data-i18n-title="status.refresh" title="Data status">
+        <span class="dot"></span><span id="status-text" role="status" aria-live="polite" data-i18n="status.loading">Loading…</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" style="padding: 22px 0 64px; display: grid; gap: 18px;">
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2 data-i18n="trip.title">When are you here?</h2>
+        <p class="sub" data-i18n="trip.sub">Set your dates and every peak gets scored for every sport, day by day. Beyond the forecast horizon it falls back to what the last thirty years say is normal.</p>
+      </div>
+    </div>
+    <form class="trip-form" id="trip-form" autocomplete="off">
+      <label class="trip-field">
+        <span data-i18n="trip.arrive">Arrive</span>
+        <input type="date" id="trip-from">
+      </label>
+      <label class="trip-field">
+        <span data-i18n="trip.depart">Depart</span>
+        <input type="date" id="trip-to">
+      </label>
+      <div class="trip-presets" id="trip-presets"></div>
+    </form>
+    <div id="trip-summary"></div>
+  </section>
+
+  <section class="card" id="pack-card">
+    <div class="card-head">
+      <div>
+        <h2 data-i18n="trip.packTitle">What that means for the pack</h2>
+        <p class="sub" data-i18n="trip.packSub">Derived from the actual numbers across your window, not a generic list.</p>
+      </div>
+    </div>
+    <div id="packing"></div>
+  </section>
+
+  <div id="itinerary" class="doc"></div>
+
+  <footer class="footer">
+    <p data-i18n-html="footer.attributionShort">placeholder</p>
+    <p class="tiny" data-i18n="footer.scoresOpinion">placeholder</p>
+  </footer>
+</main>
+<div class="tooltip" id="tooltip" role="status" aria-live="off"></div>
+<script type="module" src="js/trip.js"></script>
+</body>
+</html>

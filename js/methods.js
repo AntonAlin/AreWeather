@@ -101,10 +101,6 @@ const attribution = SOURCES.providers.map((p) => `${tr(p.credit)}.`).join('<br>'
   + `${link(SOURCES.aggregator.licenceUrl, 'CC BY 4.0')}. Modified: values shown are downscaled, `
   + `combined and bias-corrected by ÅreWeather.`;
 $('#attribution').innerHTML = attribution;
-$('#footer-attribution').innerHTML = `Weather data by ${link(SOURCES.aggregator.url, 'Open-Meteo')} `
-  + `(${link(SOURCES.aggregator.licenceUrl, 'CC BY 4.0')}, modified) aggregating `
-  + `${SOURCES.providers.map((p) => p.org).join(', ')} and ${SOURCES.reanalysis.org}. `
-  + `Observation data from ${link(SOURCES.observations.licenceUrl, 'SMHI')}, CC BY 4.0 SE, modified.`;
 $('#verified-pill').textContent = t('pill.verified', { date: SOURCES.verified });
 
 /* ---------- 2. the requests ---------- */

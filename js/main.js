@@ -1,14 +1,15 @@
 /* Application shell: state, loading, event wiring, redraw. */
 
 import { APP, MOUNTAINS } from './config.js';
-import { fetchSurface, fetchProfile, fetchEnsemble, fetchTraining, fetchObservations, purgeCache } from './api.js';
+import { fetchSurface, fetchProfile, fetchEnsemble, fetchTraining, fetchObservations, fetchClimate, keepClimate, purgeCache } from './api.js';
 import { train } from './ml.js';
 import { assemble } from './forecast.js';
 import { renderMatrix, renderProfile, renderHourly } from './charts.js';
 import {
   renderRail, renderHero, renderIntel, renderModels, renderML, renderLegend,
-  renderBandPicker, renderObservations, tooltip, cellTooltip, setStatus,
+  renderBandPicker, renderObservations, renderClimate, renderAspect, tooltip, cellTooltip, setStatus,
 } from './ui.js';
+import { summarise, weekly, contextFor } from './climate.js';
 import { parseStationSet, buildObservations } from './observations.js';
 import { SMHI } from './config.js';
 import { $, $$, el, store, clamp, ago, nowIsoHour } from './util.js';
@@ -21,6 +22,8 @@ const state = {
   mountainId: null,
   unit: store.get(`${NS}.unit`) ?? 'ms',
   activity: store.get(`${NS}.activity`) ?? 'trail',
+  aspectLens: 'wind',
+  climate: null,
   metric: 'temp',
   hours: 48,
   selected: 0,
@@ -85,6 +88,51 @@ async function load(id, { force = false } = {}) {
     trainInBackground(mtn);
   }
   loadObservations();
+  loadClimate(mtn);
+}
+
+/* ---------- climatology ----------
+   The heaviest request the app makes, so it is deferred until the forecast is
+   on screen, summarised once, and cached for a month. What gets stored is the
+   distribution, never the decade of raw numbers behind it. */
+async function loadClimate(mtn) {
+  state.climate = null;
+  if (state.model) renderClimate($('#climate'), state.model, null, state);
+  try {
+    const { data } = await fetchClimate(mtn);
+    // A cached entry is already summarised; a fresh one still has its archive.
+    const summary = data.raw ? summarise(data.raw) : data;
+    if (!summary) throw new Error('empty archive');
+    if (data.raw) keepClimate(mtn.id, summary);
+    if (state.mountainId !== mtn.id || !state.model) return;
+    state.climate = { ...summary, weeks: weekly(summary) };
+    renderClimateCard();
+  } catch (err) {
+    state.climate = { error: err?.message ?? 'unavailable' };
+    if (state.mountainId === mtn.id) renderClimate($('#climate'), state.model, state.climate, state);
+  }
+}
+
+/** The climate card compares the *selected day*, so it re-renders with the hour. */
+function renderClimateCard() {
+  if (!state.model) return;
+  const climate = state.climate;
+  if (!climate || climate.error) {
+    renderClimate($('#climate'), state.model, climate, state);
+    return;
+  }
+  const h = state.model.hours[state.selected] ?? state.model.hours[0];
+  const date = h.iso.slice(0, 10);
+  const sameDay = state.model.hours.filter((x) => x.iso.slice(0, 10) === date);
+  const temps = sameDay.map((x) => x.summit.temp).filter(Number.isFinite);
+  const winds = sameDay.map((x) => x.summit.wind).filter(Number.isFinite);
+  const context = contextFor(climate, {
+    date,
+    tmax: temps.length ? Math.max(...temps) : NaN,
+    wind: winds.length ? Math.max(...winds) : NaN,
+    precip: sameDay.reduce((a, x) => a + (x.summit.precip || 0), 0),
+  });
+  renderClimate($('#climate'), { ...state.model, dailySummary: [{ time: h.time }] }, { ...climate, context }, state);
 }
 
 /* ---------- SMHI observations ----------
@@ -174,6 +222,8 @@ function renderAll() {
   renderIntel($('#intel'), m, state);
   renderModels($('#models'), m, state);
   renderML($('#ml'), m);
+  renderAspect($('#aspect'), m, state);
+  renderClimateCard();
   renderBandPicker($('#band-picker'), m, state, pickBand);
   $('#band-label').textContent = state.bandZ === m.mtn.summit ? t('hourly.summit') : t('hourly.band', { z: state.bandZ });
   renderLegend($('#matrix-legend'), state.metric, state.unit);
@@ -202,6 +252,8 @@ function drawCharts() {
       renderHero($('#hero'), m, state);
       renderIntel($('#intel'), m, state);
       renderModels($('#models'), m, state);
+      renderAspect($('#aspect'), m, state);
+      renderClimateCard();
       renderBandPicker($('#band-picker'), m, state, pickBand);
       $('#band-label').textContent = state.bandZ === m.mtn.summit ? t('hourly.summit') : t('hourly.band', { z: state.bandZ });
       drawProfile();
@@ -244,6 +296,8 @@ function drawHourly() {
       renderHero($('#hero'), state.model, state);
       renderIntel($('#intel'), state.model, state);
       renderModels($('#models'), state.model, state);
+      renderAspect($('#aspect'), state.model, state);
+      renderClimateCard();
       drawProfile();
       drawCharts();
     },
@@ -286,6 +340,11 @@ function wire() {
     store.set(`${NS}.unit`, state.unit);
     renderAll();
   }));
+  $$('#aspect-lens button').forEach((b) => b.addEventListener('click', () => {
+    press($$('#aspect-lens button'), b);
+    state.aspectLens = b.dataset.lens;
+    if (state.model) renderAspect($('#aspect'), state.model, state);
+  }));
   $('#status-pill').addEventListener('click', () => load(state.mountainId, { force: true }));
 
   addEventListener('keydown', (ev) => {
@@ -295,6 +354,8 @@ function wire() {
       renderHero($('#hero'), state.model, state);
       renderIntel($('#intel'), state.model, state);
       renderModels($('#models'), state.model, state);
+      renderAspect($('#aspect'), state.model, state);
+      renderClimateCard();
       drawCharts();
       ev.preventDefault();
     }

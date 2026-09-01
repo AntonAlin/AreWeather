@@ -13,7 +13,7 @@ import { APP, ENDPOINTS, MODELS, PROFILE_MODELS, PRESSURE_LEVELS, ENSEMBLE_MODEL
 import { store, isoDate, daysAgo } from './util.js';
 
 const NS = `areweather.${APP.version}`;
-const TTL = { forecast: 30 * 60e3, ensemble: 3 * 3600e3, training: 24 * 3600e3, observations: 20 * 60e3 };
+const TTL = { forecast: 30 * 60e3, ensemble: 3 * 3600e3, training: 24 * 3600e3, observations: 20 * 60e3, climate: 30 * 864e5 };
 
 export class ApiError extends Error {}
 
@@ -219,6 +219,47 @@ export function fetchTraining(mtn, opts) {
 export function fetchObservations(parameter, opts) {
   const url = `${SMHI.base}/parameter/${parameter}/station-set/all/period/latest-hour/data.json`;
   return withCache(`obs.${parameter}`, TTL.observations, () => getJSON(url, 25000), opts);
+}
+
+/**
+ * Thirty years of daily ERA5 for one peak, for the climatology.
+ *
+ * This is the largest request the app makes by a wide margin, so it is done
+ * once per mountain and only the derived statistics are kept — the raw decade
+ * of numbers is summarised and thrown away rather than parked in localStorage,
+ * where it would not fit anyway. A climatology does not change, so the cache
+ * lasts a month.
+ */
+export async function fetchClimate(mtn, { force = false, years = 30 } = {}) {
+  const key = `climate.${mtn.id}.v2`;
+  const hit = cached(key, TTL.climate);
+  if (hit && hit.fresh && !force) return { data: hit.data, cachedAt: hit.t, stale: false };
+
+  const end = daysAgo(7);
+  const start = new Date(end);
+  start.setFullYear(start.getFullYear() - years);
+  const params = {
+    ...COMMON,
+    latitude: mtn.lat,
+    longitude: mtn.lon,
+    elevation: mtn.summit,
+    start_date: isoDate(start),
+    end_date: isoDate(end),
+    daily: ['temperature_2m_max', 'temperature_2m_min', 'precipitation_sum', 'snowfall_sum', 'wind_speed_10m_max'],
+    models: 'era5',
+  };
+  try {
+    const raw = await getJSON(`${ENDPOINTS.archive}?${qs(params)}`, 60000);
+    return { data: { raw, years, from: params.start_date, to: params.end_date }, cachedAt: Date.now(), stale: false };
+  } catch (err) {
+    if (hit) return { data: hit.data, cachedAt: hit.t, stale: true, error: err };
+    throw err;
+  }
+}
+
+/** Store the derived climatology, so the raw response never has to be kept. */
+export function keepClimate(mtnId, summary) {
+  keep(`climate.${mtnId}.v2`, summary);
 }
 
 /* ---------- response helpers ---------- */

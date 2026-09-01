@@ -27,6 +27,8 @@
     </a>
     <div class="topbar-actions">
       <a class="nav-link" href="compare.html" data-i18n="nav.compare">Compare peaks</a>
+      <a class="nav-link" href="trip.html" data-i18n="nav.trip">Plan a trip</a>
+      <a class="nav-link" href="links.html" data-i18n="nav.links">Everything else</a>
       <a class="nav-link" href="methods.html" data-i18n="nav.method">Method</a>
       <div class="seg" id="lang-toggle" role="group" data-i18n-label="lang.group" aria-label="Language"></div>
       <div class="seg" id="unit-toggle" role="group" data-i18n-label="unit.windGroup" aria-label="Wind unit">
@@ -88,6 +90,33 @@
       <div class="intel-grid" id="intel"></div>
     </section>
   </div>
+
+  <section class="card" id="aspect-card">
+      <div class="card-head">
+        <div>
+          <h2 data-i18n="aspect.title">Which side of the mountain</h2>
+          <p class="sub" data-i18n="aspect.sub">Wind strips one side and loads the other.</p>
+        </div>
+        <div class="controls">
+          <div class="seg small" id="aspect-lens" role="group" data-i18n-label="aspect.lensGroup" aria-label="What to show">
+            <button type="button" data-lens="wind" class="on" aria-pressed="true" data-i18n="aspect.lens.wind">Wind</button>
+            <button type="button" data-lens="loading" aria-pressed="false" data-i18n="aspect.lens.loading">Loading</button>
+            <button type="button" data-lens="sun" aria-pressed="false" data-i18n="aspect.lens.sun">Sun</button>
+          </div>
+        </div>
+      </div>
+      <div id="aspect"></div>
+  </section>
+
+  <section class="card" id="climate-card">
+    <div class="card-head">
+      <div>
+        <h2 data-i18n="climate.title">Is this normal?</h2>
+        <p class="sub" data-i18n="climate.sub">Today against thirty years of the same date.</p>
+      </div>
+    </div>
+    <div id="climate"><p class="sub" data-i18n="climate.loading">Reading thirty years of archive…</p></div>
+  </section>
 
   <section class="card" id="obs-card">
     <div class="card-head">

@@ -275,3 +275,126 @@ export function moonIllumination(date) {
   const cyclePosition = (((days % SYNODIC) + SYNODIC) % SYNODIC) / SYNODIC;
   return (1 - Math.cos(2 * Math.PI * cyclePosition)) / 2;
 }
+
+/* ---------- sun and aspect ----------
+   The thing a guide knows and a visitor does not is not what the weather is —
+   it is which side of the mountain to be on. Wind direction decides which
+   aspects are stripped and which are loaded; the sun decides which softened at
+   eleven and which never will. Both are geometry. */
+
+/** Smallest angle between two bearings, 0–180°. */
+export const angleBetween = (a, b) => {
+  const d = Math.abs(((a - b) % 360 + 360) % 360);
+  return d > 180 ? 360 - d : d;
+};
+
+const rad = (deg) => (deg * Math.PI) / 180;
+const deg = (r) => (r * 180) / Math.PI;
+
+/**
+ * A wall-clock time in a named zone, as a true UTC instant.
+ *
+ * The forecast's Date objects are built from local wall-clock components, so
+ * they are only correct for a viewer sitting in the mountains' timezone. Solar
+ * geometry needs the real instant, so it is recovered here rather than assumed.
+ */
+export function utcFromWallClock(date, timeZone) {
+  const naive = Date.UTC(
+    date.getFullYear(), date.getMonth(), date.getDate(),
+    date.getHours(), date.getMinutes(), 0,
+  );
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    }).formatToParts(new Date(naive)).reduce((a, p) => (a[p.type] = p.value, a), {});
+    const seen = Date.UTC(+parts.year, +parts.month - 1, +parts.day,
+      +parts.hour % 24, +parts.minute, +parts.second);
+    return naive - (seen - naive);
+  } catch {
+    return naive;
+  }
+}
+
+/**
+ * Solar altitude and azimuth. Low-precision NOAA formulation — good to a
+ * fraction of a degree, which is far finer than anything downstream needs.
+ * Azimuth is measured clockwise from north.
+ */
+export function solarPosition(utcMs, lat, lon) {
+  const d = (utcMs - Date.UTC(2000, 0, 1, 12)) / 864e5;
+  const g = rad(357.529 + 0.98560028 * d);
+  const q = 280.459 + 0.98564736 * d;
+  const L = rad(q + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g));
+  const e = rad(23.439 - 0.00000036 * d);
+
+  const declination = Math.asin(Math.sin(e) * Math.sin(L));
+  const rightAscension = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L));
+  const gmst = 18.697374558 + 24.06570982441908 * d;
+  const lst = rad((((gmst % 24) + 24) % 24) * 15 + lon);
+  const hourAngle = lst - rightAscension;
+
+  const latR = rad(lat);
+  const sinAlt = Math.sin(latR) * Math.sin(declination)
+    + Math.cos(latR) * Math.cos(declination) * Math.cos(hourAngle);
+  const altitude = Math.asin(clamp(sinAlt, -1, 1));
+  const cosAz = (Math.sin(declination) - Math.sin(latR) * sinAlt)
+    / (Math.cos(latR) * Math.cos(altitude));
+  let azimuth = Math.acos(clamp(cosAz, -1, 1));
+  if (Math.sin(hourAngle) > 0) azimuth = 2 * Math.PI - azimuth;
+
+  return { elevation: deg(altitude), azimuth: (deg(azimuth) + 360) % 360 };
+}
+
+/** The eight aspects, as compass bearings of the direction a slope faces. */
+export const ASPECTS = [0, 45, 90, 135, 180, 225, 270, 315];
+
+/**
+ * What each aspect of the mountain is doing, given the wind and the sun.
+ *
+ * Windward slopes are scoured and windier than the summit average; lee slopes
+ * are calmer and collect what the wind stripped from the other side, which is
+ * also where a slab builds. Sun is the dot product of the slope's aspect with
+ * the sun's azimuth, scaled by how high the sun is.
+ *
+ * This is geometry, not terrain: it knows the compass, not the gully.
+ */
+export function aspectAnalysis(hour, mtn, sun) {
+  const windFrom = hour.summit?.dir;
+  const speed = hour.summit?.wind;
+  return ASPECTS.map((bearing) => {
+    const theta = Number.isFinite(windFrom) ? angleBetween(bearing, windFrom) : NaN;
+    // 1.0 straight into the wind, 0.35 in the lee.
+    const exposure = Number.isFinite(theta) ? 0.35 + 0.65 * ((1 + Math.cos(rad(theta))) / 2) : NaN;
+    const leeness = Number.isFinite(theta) ? (1 - Math.cos(rad(theta))) / 2 : NaN;
+    const sunlight = sun && sun.elevation > 0
+      ? Math.max(0, Math.cos(rad(angleBetween(bearing, sun.azimuth)))) * Math.sin(rad(sun.elevation))
+      : 0;
+    return {
+      bearing,
+      exposure,
+      leeness,
+      wind: Number.isFinite(speed) && Number.isFinite(exposure) ? speed * exposure : NaN,
+      loading: Number.isFinite(leeness) ? Math.round((hour.drift ?? 0) * leeness) : 0,
+      sun: sunlight,
+      sunlit: sunlight > 0.08,
+    };
+  });
+}
+
+/** The headline reading of an aspect analysis: where to be, and what to avoid. */
+export function aspectAdvice(aspects) {
+  const usable = aspects.filter((a) => Number.isFinite(a.wind));
+  if (!usable.length) return null;
+  const calmest = [...usable].sort((a, b) => a.wind - b.wind);
+  const windiest = [...usable].sort((a, b) => b.wind - a.wind);
+  const loaded = [...usable].sort((a, b) => b.loading - a.loading);
+  const sunny = [...usable].sort((a, b) => b.sun - a.sun);
+  return {
+    sheltered: calmest.slice(0, 2).map((a) => a.bearing),
+    exposed: windiest.slice(0, 2).map((a) => a.bearing),
+    loaded: loaded[0].loading > 15 ? loaded.filter((a) => a.loading > loaded[0].loading * 0.6).map((a) => a.bearing) : [],
+    sunny: sunny[0].sun > 0.08 ? sunny.slice(0, 2).map((a) => a.bearing) : [],
+    maxLoading: loaded[0].loading,
+  };
+}

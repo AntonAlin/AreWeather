@@ -1,8 +1,11 @@
 /* Panel rendering. Everything reads from the assembled forecast model; nothing
    here recomputes meteorology. */
 
-import { el, $, fmtWind, windUnitLabel, compass, fmtClock, fmtWeekday, scoreColor, rampCss, TEMP_STOPS, WIND_STOPS, ago, dec } from './util.js';
+import { el, $, fmtWind, windUnitLabel, compass, fmtClock, fmtWeekday, fmtDayMonth, scoreColor, rampCss, TEMP_STOPS, WIND_STOPS, ago, dec } from './util.js';
 import { bestWindow } from './forecast.js';
+import { solarPosition, utcFromWallClock, aspectAnalysis, aspectAdvice } from './physics.js';
+import { renderAspectRose, renderClimateYear } from './charts.js';
+import { APP } from './config.js';
 import { MOUNTAINS } from './config.js';
 import { t, tr, wmoLabel } from './i18n.js';
 
@@ -414,6 +417,123 @@ export function renderObservations(node, model, obs, state) {
     foot.innerHTML = t('obs.verifyEmpty', { n: v?.n ?? 0 });
   }
   el('p', { class: 'ml-note', style: 'margin-top:8px', html: t('obs.caveat') }, node);
+}
+
+/* ---------- climate context ---------- */
+export function renderClimate(node, model, climate, state) {
+  node.textContent = '';
+  if (!climate) {
+    el('p', { class: 'sub', text: t('climate.loading') }, node);
+    return;
+  }
+  if (climate.error) {
+    el('div', { class: 'obs-empty', html: t('climate.failed') }, node);
+    return;
+  }
+
+  const day = model.dailySummary?.[state.selectedDay ?? 0];
+  const context = climate.context;
+  const head = el('div', { class: 'obs-head' }, node);
+
+  if (context?.temp) {
+    const { temp } = context;
+    const big = el('div', { class: 'obs-delta' }, head);
+    const sign = temp.anomaly > 0 ? '+' : '−';
+    big.innerHTML = `<span class="num">${sign}${dec(Math.abs(temp.anomaly), 1)}°</span>`;
+    const band = unusualnessTone(temp.percentile);
+    big.style.color = band.colour;
+    const txt = el('div', { class: 'obs-headline' }, head);
+    txt.innerHTML = t('climate.headline', {
+      pct: temp.pct >= 50 ? temp.pct : 100 - temp.pct,
+      word: t(temp.pct >= 50 ? 'climate.warmer' : 'climate.colder'),
+      date: fmtDayMonth(day?.time ?? model.hours[0].time),
+      years: context.years,
+      normal: dec(temp.normal, 0),
+    }) + '<br><span class="muted">' + t('climate.detail', {
+      normalHigh: dec(context.norm.tmaxP50, 0),
+      normalLow: dec(context.norm.tminP50, 0),
+      wet: Math.round((context.norm.wetShare ?? 0) * 100),
+      wind: dec(context.norm.windP50, 0),
+    }) + '</span>';
+  } else {
+    el('div', { class: 'obs-headline', text: t('climate.noContext') }, head);
+  }
+
+  const chart = el('div', { id: 'climate-year' }, node);
+  const width = Math.max(320, node.clientWidth || 700);
+  renderClimateYear(chart, climate.weeks, {
+    width,
+    todayDoy: context?.doy,
+    label: t('climate.aria', { mtn: model.mtn.name, years: climate.years }),
+  });
+
+  const key = el('div', { class: 'chart-key' }, node);
+  const item = (colour, label, block) => {
+    const span = el('span', {}, key);
+    const swatch = el('i', { class: block ? 'block' : '' }, span);
+    if (block) swatch.style.background = colour;
+    else swatch.style.borderTopColor = colour;
+    el('span', { text: label }, span);
+  };
+  item('#4fd1ff', t('climate.key.high'));
+  item('#a78bfa', t('climate.key.low'));
+  item('rgba(79,209,255,.3)', t('climate.key.band'), true);
+  item('rgba(224,242,254,.5)', t('climate.key.snow'), true);
+
+  el('p', {
+    class: 'ml-note', style: 'margin-top:12px',
+    html: t('climate.caveat', { years: climate.years, from: climate.from?.slice(0, 4), to: climate.to?.slice(0, 4) }),
+  }, node);
+}
+
+function unusualnessTone(percentile) {
+  if (percentile >= 0.95 || percentile <= 0.05) return { colour: 'var(--rose)' };
+  if (percentile >= 0.8 || percentile <= 0.2) return { colour: 'var(--amber)' };
+  return { colour: 'var(--lime)' };
+}
+
+/* ---------- aspect ---------- */
+export function renderAspect(node, model, state) {
+  const h = model.hours[state.selected] ?? model.hours[0];
+  node.textContent = '';
+
+  const sun = solarPosition(utcFromWallClock(h.time, APP.timezone), model.mtn.lat, model.mtn.lon);
+  const aspects = aspectAnalysis(h, model.mtn, sun);
+  const advice = aspectAdvice(aspects);
+
+  const wrap = el('div', { class: 'aspect-wrap' }, node);
+  const roseBox = el('div', { class: 'aspect-rose' }, wrap);
+  renderAspectRose(roseBox, aspects, {
+    lens: state.aspectLens ?? 'wind',
+    unit: state.unit,
+    wind: { speed: h.summit.wind, dir: h.summit.dir },
+    sun,
+  });
+
+  const side = el('div', { class: 'aspect-side' }, wrap);
+  const names = (list) => list.map((b) => compass(b)).join(' / ');
+
+  if (advice) {
+    const line = (k, value, tone) => {
+      const row = el('div', { class: `aspect-line ${tone ?? ''}` }, side);
+      el('span', { class: 'k', text: k }, row);
+      el('span', { class: 'v', text: value }, row);
+    };
+    line(t('aspect.sheltered'), names(advice.sheltered), 'good');
+    line(t('aspect.exposed'), names(advice.exposed), 'warn');
+    if (advice.loaded.length) line(t('aspect.loaded'), names(advice.loaded), 'danger');
+    if (advice.sunny.length) line(t('aspect.sunny'), names(advice.sunny));
+    line(t('aspect.sun'), sun.elevation > 0
+      ? t('aspect.sunUp', { deg: dec(sun.elevation, 0), dir: compass(sun.azimuth) })
+      : t('aspect.sunDown'));
+
+    const verdict = el('p', { class: 'ml-note', style: 'margin-top:12px' }, side);
+    verdict.innerHTML = advice.loaded.length
+      ? t('aspect.verdictLoaded', { sheltered: names(advice.sheltered), loaded: names(advice.loaded) })
+      : t('aspect.verdictCalm', { sheltered: names(advice.sheltered) });
+  }
+
+  el('p', { class: 'ml-note', style: 'margin-top:12px', html: t('aspect.caveat') }, node);
 }
 
 /* ---------- legends and small parts ---------- */

@@ -46,6 +46,26 @@ day the summit is *warmer* than the village. This app forecasts every 100 m band
   Saturday?* — by scoring all ten peaks across the next seven days in one grid, with the best
   three-hour daylight window on each day. Two small requests per peak, three at a time, sharing the
   same cache as the detail view, and switching activity re-scores without refetching anything.
+- **Thirty years of climatology, for the question a visitor actually asks** — *is this normal?* Daily
+  ERA5 data from 1995 onward is reduced to a day-of-year distribution per peak (each day pooling a
+  ±5-day band across every year, the same smoothing a published climate normal uses), so today's
+  forecast comes with the percentile it sits in and the year-at-a-glance strip shows when the good
+  weeks are. The raw archive is summarised once and thrown away: what gets cached is a few kilobytes
+  of statistics.
+- **Aspect-aware guidance — which side of the mountain.** The wind direction and the sun's position
+  are resolved onto all eight compass sectors: which faces are sheltered, which are scoured, which
+  are being loaded with wind-transported snow, and which are actually in the sun right now. The sun
+  comes from a real solar-position calculation, which at 63.4°N matters — midwinter noon puts it 3°
+  above the horizon. **This is terrain reasoning, not an avalanche forecast**; the bulletin still
+  comes from [lavinprognoser.se](https://www.lavinprognoser.se).
+- **A trip planner.** Give it your arrival and departure dates and every peak is scored for every
+  sport it supports, day by day, with the three best things to do on each. Beyond the seven-day
+  forecast horizon it stops pretending and falls back to what the last thirty years say is normal
+  for those dates. The packing list is derived from the actual numbers in your window — coldest
+  wind chill, strongest gust, whether it freezes and thaws — not from a generic checklist.
+- **A page for everything a forecast cannot tell you** — the avalanche bulletin, live webcams, lift
+  opening hours, road conditions, hut seasons, the reindeer herding areas and the local rules that
+  apply in them. Nineteen links, each with a sentence on why it is there and when it matters.
 - **Works with no signal.** The last forecast for each peak is cached in `localStorage` and a
   service worker caches the app shell, so the page opens at the trailhead and tells you how old
   the data is.
@@ -108,6 +128,11 @@ the textbook wet-bulb case, recovery of an injected lapse rate, inversion detect
 landing between base and summit, and — importantly — that the ridge regression actually recovers a
 deliberately injected model bias and improves hold-out error.
 
+It also feeds thirty synthetic years through the climatology to check the normals come out the right
+way round and the percentiles land where they should, checks the solar position against the known
+midwinter and midsummer noon elevations at this latitude, checks the aspect analysis calls shelter on
+the lee side and loading with it, and audits both languages.
+
 ## Adding or editing a mountain
 
 Everything about a peak lives in one object in [`js/config.js`](js/config.js):
@@ -151,19 +176,25 @@ thresholds, snow-drift threshold — are all together in the `PHYS` block of the
 ```
 index.html          single-peak forecast
 compare.html        all ten peaks, scored side by side for the week
+trip.html           date-range planner: what to do on each day of a visit
+links.html          everything a forecast cannot tell you
 methods.html        every calculation, source and licence
 styles.css          design system
-js/config.js        peaks, models, endpoints, physical tunables
+js/config.js        peaks, models, endpoints, activities, resources, tunables
 js/api.js           Open-Meteo fetching, progressive fallback, caching
-js/physics.js       thermodynamics, soundings, elevation downscaling
+js/physics.js       thermodynamics, soundings, downscaling, sun and aspect
+js/climate.js       thirty-year day-of-year climatology and percentiles
 js/ml.js            ridge / logistic regression, model skill weighting, validation
 js/forecast.js      assembles everything into one view model, activity scoring
-js/charts.js        hand-rolled SVG: elevation matrix, vertical profile, hourly
+js/charts.js        hand-rolled SVG: elevation matrix, profile, aspect rose, year strip
 js/ui.js            panels
 js/main.js          state and wiring for the single-peak view
 js/observations.js  SMHI station selection, comparison and the verification log
 js/compare.js       state and wiring for the comparison view
+js/trip.js          the trip planner and its packing rules
+js/links.js         renders the resources page from configuration
 js/methods.js       renders the method page from the live configuration
+js/i18n.js          every string, in both languages
 sw.js               offline app shell
 tools/selftest.mjs  offline physics + ML test harness
 ```
@@ -200,12 +231,15 @@ configuration the forecast runs on, covering every formula and every licence. Th
 | [ECMWF](https://www.ecmwf.int/en/forecasts/datasets/open-data) | IFS 0.25° | CC BY 4.0 | Based on data and products of ECMWF |
 | [UK Met Office](https://registry.opendata.aws/met-office-global-deterministic/) | UM global 10 km | CC BY-**SA** upstream — see note | Contains public sector information licensed by the UK Met Office |
 | [NOAA/NCEP](https://www.weather.gov/disclaimer) | GFS | Public domain | Credit as a courtesy |
-| [Copernicus C3S](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land) | ERA5-Land, the ML training target | CC BY (since 2 Jul 2025) | Generated using Copernicus Climate Change Service information |
+| [Copernicus C3S](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land) | ERA5-Land as the ML training target, ERA5 for the thirty-year climatology | CC BY (since 2 Jul 2025) | Generated using Copernicus Climate Change Service information |
 | [SMHI](https://www.smhi.se/data/om-smhis-data/villkor-for-anvandning) | Live station observations | CC BY 4.0 SE | Observation data from SMHI |
 
-CC BY 4.0 requires three things and the site does all three, in the footer of both pages: credit the
+CC BY 4.0 requires three things and the site does all three, in the footer of every page: credit the
 source, link the licence, and **state that changes were made** — which they emphatically are, since
 nothing displayed is a raw model value.
+
+The links on [`links.html`](links.html) are ordinary outbound links to other people's sites — no data
+is fetched from any of them, nothing is embedded, and nothing there is affiliated with this site.
 
 **Two things to keep an eye on if you fork or extend this:**
 

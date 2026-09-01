@@ -10,8 +10,11 @@ import { MODELS, PRESSURE_LEVELS, ACTIVITIES, SOURCES, activitiesFor, activityBy
 import { assemble, bandsFor, scoreActivity, dailySummaries, bestWindow } from '../js/forecast.js';
 import { train, correctTemperature, modelWeights } from '../js/ml.js';
 import { distanceKm, parseStationSet, nearestStations, collectStation, compareWithModel, buildObservations } from '../js/observations.js';
-import { wetBulb, dewPoint, windChill, snowRatio, buildSounding, temperatureAt } from '../js/physics.js';
+import { wetBulb, dewPoint, windChill, snowRatio, buildSounding, temperatureAt, solarPosition, aspectAnalysis, aspectAdvice, angleBetween, ASPECTS } from '../js/physics.js';
+import { summarise, percentileOf, contextFor, unusualness, weekly, dayOfYear } from '../js/climate.js';
+import { STRINGS, LANGS } from '../js/i18n.js';
 import { round } from '../js/util.js';
+import fs from 'node:fs';
 
 let failures = 0;
 const ok = (cond, msg, detail = '') => {
@@ -415,6 +418,149 @@ console.log('\nGraceful degradation');
 
   const scoreless = { summit: { temp: NaN, feels: NaN, wind: NaN, gust: NaN, precip: NaN, rain: NaN, phase: 'unknown', z: 1420 }, daylight: true, time: new Date(), newSnow24: 0, drift: 0, cloud: 0, freezingLevel: NaN, moon: 0.5 };
   ok(ACTIVITIES.every((a) => Number.isFinite(scoreActivity(a, scoreless).score)), 'every activity survives an all-NaN hour');
+}
+
+/* ---------- 11. climatology ---------- */
+console.log('\nClimatology');
+{
+  /* Thirty synthetic years with a clean seasonal cycle: coldest at new year,
+     warmest in July, plus a repeatable pseudo-random year-to-year wobble. */
+  const time = [], tmax = [], tmin = [], precip = [], snow = [], wind = [];
+  let seed = 7;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  for (let y = 1995; y < 2025; y++) {
+    for (let doy = 1; doy <= 365; doy++) {
+      const d = new Date(Date.UTC(y, 0, doy));
+      time.push(d.toISOString().slice(0, 10));
+      const season = -8 + 14 * Math.sin(((doy - 105) / 365) * 2 * Math.PI);
+      const noise = (rnd() - 0.5) * 6;
+      tmax.push(round(season + noise, 2));
+      tmin.push(round(season + noise - 6, 2));
+      precip.push(round(rnd() * 8, 2));
+      snow.push(season < 0 ? round(rnd() * 4, 2) : 0);
+      wind.push(round(6 + rnd() * 12, 2));
+    }
+  }
+  const climate = summarise({ daily: { time, temperature_2m_max: tmax, temperature_2m_min: tmin, precipitation_sum: precip, snowfall_sum: snow, wind_speed_10m_max: wind } });
+
+  ok(climate.years === 30, 'counts the years in the archive', `got ${climate?.years}`);
+  ok(climate.days[15].n === 30 * 11, 'pools a ±5-day band across every year', `got ${climate.days[15].n}`);
+  ok(climate.days.filter(Boolean).length >= 365, 'covers every day of the year');
+  ok(climate.percentiles[15].tmax.length === climate.days[15].n, 'keeps one sample per pooled day for percentiles');
+
+  const jan = climate.days[dayOfYear('2026-01-15')];
+  const jul = climate.days[dayOfYear('2026-07-15')];
+  ok(jul.tmaxP50 > jan.tmaxP50 + 15, 'July is warmer than January in the normals', `${round(jan.tmaxP50, 1)} vs ${round(jul.tmaxP50, 1)}`);
+  ok(jan.tmaxP10 < jan.tmaxP50 && jan.tmaxP50 < jan.tmaxP90, 'the percentiles are ordered');
+  ok(jan.snowMean > jul.snowMean, 'snow falls in the winter half of the record');
+
+  ok(near(percentileOf(5, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]), 0.4, 1e-9), 'percentileOf ranks a value inside its sample');
+  ok(Number.isNaN(percentileOf(5, [])), 'and refuses an empty sample');
+
+  const cold = contextFor(climate, { date: '2026-01-15', tmax: jan.tmaxP10 - 4, wind: jan.windP50, precip: 0 });
+  const warm = contextFor(climate, { date: '2026-01-15', tmax: jan.tmaxP90 + 4, wind: jan.windP50, precip: 0 });
+  ok(cold.temp.percentile < 0.1, 'a cold day lands in the bottom tenth', `${cold.temp.pct}%`);
+  ok(warm.temp.percentile > 0.9, 'a warm day lands in the top tenth', `${warm.temp.pct}%`);
+  ok(cold.temp.anomaly < 0 && warm.temp.anomaly > 0, 'the anomaly carries the right sign');
+  ok(near(warm.wind.percentile, 0.5, 0.1), 'a median wind reads as median');
+  ok(contextFor(null, { date: '2026-01-15', tmax: 0, wind: 0, precip: 0 }) === null, 'returns nothing rather than guessing without an archive');
+
+  ok(unusualness(0.5) === 'normal', 'the middle of the distribution is simply normal', unusualness(0.5));
+  ok(unusualness(0.02) === 'far-below' && unusualness(0.98) === 'far-above', 'and the tails are called on both sides');
+  ok(unusualness(0.15) === 'below' && unusualness(0.85) === 'above', 'with a softer word just inside them');
+  ok(unusualness(NaN) === null, 'and nothing at all without a percentile');
+
+  const wk = weekly(climate);
+  ok(wk.length === 52, 'the year strip has 52 weeks', `got ${wk.length}`);
+  ok(wk.every((w) => w && Number.isFinite(w.tmax) && Number.isFinite(w.tmin) && w.tmax > w.tmin), 'every week has a temperature band the right way up');
+  const warmest = wk.reduce((a, b) => (b.tmax > a.tmax ? b : a));
+  ok(warmest.week >= 24 && warmest.week <= 33, 'the warmest week falls in high summer', `week ${warmest.week}`);
+}
+
+/* ---------- 12. sun and aspect ---------- */
+console.log('\nSun position and aspect');
+{
+  const LAT = 63.4305, LON = 13.0800;
+  /* Solar noon at midwinter and midsummer, at Åreskutan's latitude. */
+  const winter = solarPosition(Date.UTC(2025, 11, 21, 11, 12), LAT, LON);
+  const summer = solarPosition(Date.UTC(2026, 5, 21, 11, 12), LAT, LON);
+  ok(near(winter.elevation, 3.1, 1.0), 'midwinter noon sun is barely 3° up', `${round(winter.elevation, 1)}°`);
+  ok(near(summer.elevation, 50.1, 1.0), 'midsummer noon sun reaches 50°', `${round(summer.elevation, 1)}°`);
+  ok(near(winter.azimuth, 180, 6) && near(summer.azimuth, 180, 6), 'and both are due south at local noon');
+  const morning = solarPosition(Date.UTC(2026, 5, 21, 4, 0), LAT, LON);
+  const evening = solarPosition(Date.UTC(2026, 5, 21, 18, 0), LAT, LON);
+  ok(morning.azimuth < 120, 'the summer sun is in the east in the morning', `${round(morning.azimuth)}°`);
+  ok(evening.azimuth > 240, 'and in the west in the evening', `${round(evening.azimuth)}°`);
+  const night = solarPosition(Date.UTC(2025, 11, 21, 23, 0), LAT, LON);
+  ok(night.elevation < 0, 'midwinter midnight is below the horizon');
+
+  ok(near(angleBetween(350, 10), 20, 1e-9), 'angles wrap around north');
+  ok(near(angleBetween(0, 180), 180, 1e-9), 'and top out at 180°');
+
+  /* A steady 20 m/s from the west, 12 cm of new snow already moving (the drift
+     index runs 0-100), with the sun in the south. */
+  const hour = { summit: { wind: 20, gust: 28, dir: 270, temp: -6 }, newSnow24: 12, drift: 70, daylight: true };
+  const sun = { elevation: 20, azimuth: 180 };
+  const aspects = aspectAnalysis(hour, { summit: 1420, base: 400 }, sun);
+  ok(aspects.length === ASPECTS.length, 'one reading per compass sector');
+  const by = Object.fromEntries(aspects.map((a) => [a.bearing, a]));
+  ok(by[270].wind > by[90].wind, 'the windward face sees more wind than the lee', `${round(by[270].wind, 1)} vs ${round(by[90].wind, 1)}`);
+  ok(by[90].leeness > by[270].leeness, 'and the lee face is the loaded one');
+  ok(aspects.every((a) => a.wind > 0 && a.wind <= hour.summit.wind + 1e-9), 'no sector is windier than the free-air wind');
+  ok(by[180].sun > by[0].sun, 'a south face takes more sun than a north face at 20° elevation');
+
+  const advice = aspectAdvice(aspects);
+  ok(advice.sheltered.every((b2) => angleBetween(b2, 90) <= 46), 'the shelter is called on the east side', advice.sheltered.join('/'));
+  ok(advice.exposed.every((b2) => angleBetween(b2, 270) <= 46), 'and the exposure on the west side', advice.exposed.join('/'));
+  ok(advice.loaded.length > 0 && advice.loaded.every((b2) => angleBetween(b2, 90) <= 91), 'wind loading is called on the lee side', advice.loaded.join('/'));
+  ok(advice.sunny.every((b2) => angleBetween(b2, 180) <= 46), 'and the sun on the south side', advice.sunny.join('/'));
+  ok(advice.maxLoading > 0, 'and it reports how strong that loading is');
+
+  const calm = aspectAnalysis({ summit: { wind: 1, gust: 2, dir: 270, temp: 2 }, newSnow24: 0, drift: 0, daylight: true }, { summit: 1420, base: 400 }, sun);
+  ok(aspectAdvice(calm).maxLoading < advice.maxLoading, 'a calm, snowless hour loads nothing');
+  const dark = aspectAnalysis(hour, { summit: 1420, base: 400 }, { elevation: -6, azimuth: 10 });
+  ok(dark.every((a) => a.sun === 0), 'nothing is sunny when the sun is down');
+}
+
+/* ---------- 13. translations ---------- */
+console.log('\nTranslations');
+{
+  const keys = Object.keys(STRINGS);
+  const ids = LANGS.map((l) => l.id);
+  const missing = keys.filter((k) => ids.some((id) => typeof STRINGS[k][id] !== 'string' || !STRINGS[k][id].length));
+  ok(missing.length === 0, `every one of the ${keys.length} strings exists in ${ids.join(' and ')}`, missing.slice(0, 6).join(', '));
+
+  const untranslated = keys.filter((k) => STRINGS[k].en === STRINGS[k].sv && /[a-z]{4} [a-z]{4}/i.test(STRINGS[k].en));
+  ok(untranslated.length === 0, 'no multi-word string is identical in both languages', untranslated.slice(0, 4).join(', '));
+
+  const placeholders = (s2) => (s2.match(/\{[a-zA-Z]+\}/g) ?? []).sort().join(',');
+  const mismatched = keys.filter((k) => placeholders(STRINGS[k].en) !== placeholders(STRINGS[k].sv));
+  ok(mismatched.length === 0, 'both languages interpolate the same placeholders', mismatched.slice(0, 4).join(', '));
+
+  /* A dropped </a> in one language only shows up as a broken page in that
+     language, which is exactly the bug nobody notices. */
+  const tags = (s2) => (s2.match(/<\/?[a-z]+/g) ?? []).sort().join(',');
+  const tagged = keys.filter((k) => tags(STRINGS[k].en) !== tags(STRINGS[k].sv));
+  ok(tagged.length === 0, 'and carry the same inline markup', tagged.slice(0, 4).join(', '));
+
+  /* Every key the markup and the modules ask for has to exist, or the page
+     renders the key itself. */
+  const files = fs.readdirSync(new URL('../js/', import.meta.url)).filter((f) => f.endsWith('.js'));
+  const pages = fs.readdirSync(new URL('../', import.meta.url)).filter((f) => f.endsWith('.html'));
+  const asked = new Set();
+  for (const f of pages) {
+    const html = fs.readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
+    for (const m of html.matchAll(/data-i18n(?:-html|-title|-label|-content)?="([^"]+)"/g)) asked.add(m[1]);
+  }
+  for (const f of files) {
+    const js = fs.readFileSync(new URL(`../js/${f}`, import.meta.url), 'utf8');
+    for (const m of js.matchAll(/\bt\('([a-z][\w.]+)'/g)) asked.add(m[1]);
+  }
+  const unknown = [...asked].filter((k) => !STRINGS[k]);
+  ok(unknown.length === 0, `all ${asked.size} keys used by the pages and modules are defined`, unknown.slice(0, 8).join(', '));
+
+  const activityStrings = ACTIVITIES.flatMap((a) => [a.name, a.blurb, ...a.rules.map((r) => r.label)]);
+  ok(activityStrings.every((v) => v && typeof v.en === 'string' && typeof v.sv === 'string'), 'every activity name, blurb and rule is bilingual');
 }
 
 console.log(`\n${failures ? `${failures} FAILED` : 'all checks passed'}\n`);

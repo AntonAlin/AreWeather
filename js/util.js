@@ -65,6 +65,8 @@ export const fmtHour = (d) => String(d.getHours()).padStart(2, '0');
 export const fmtDay = (d) => capitalise(tidy(fmt({ weekday: 'short', day: 'numeric', month: 'short' }).format(d)));
 export const fmtShortDay = (d) => capitalise(tidy(fmt({ weekday: 'short', day: 'numeric' }).format(d)));
 export const fmtWeekday = (d) => capitalise(tidy(fmt({ weekday: 'short' }).format(d)));
+/** "1 September" — no weekday, for talking about a date rather than a day. */
+export const fmtDayMonth = (d) => tidy(fmt({ day: 'numeric', month: 'long' }).format(d));
 export const fmtClock = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 export const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 export const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return d; };

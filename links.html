@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title data-i18n="page.links.title">Everything else — ÅreWeather</title>
+<meta name="description" data-i18n-content="page.links.description" content="Avalanche bulletins, webcams, lift opening hours, road conditions, huts and official warnings for the Åre fjäll — the things a forecast cannot tell you.">
+<meta name="theme-color" content="#06080b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M6 82 38 26l17 29 9-14 24 41z' fill='%234fd1ff'/%3E%3Cpath d='M38 26l10 18-10 8-9-7z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip-link" href="#resources" data-i18n="nav.skipContent">Skip to the content</a>
+<div class="aurora" aria-hidden="true"><span class="a1"></span><span class="a2"></span><span class="a3"></span></div>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="./">
+      <svg class="brand-mark" viewBox="0 0 100 100" aria-hidden="true"><path d="M4 84 38 24l17 30 9-15 28 45z"/><path d="M38 24l10 18-10 9-9-8z" class="snow"/></svg>
+      <span class="brand-text">ÅRE<b>WEATHER</b><i data-i18n="brand.links">everything else</i></span>
+    </a>
+    <div class="topbar-actions">
+      <div class="seg" id="lang-toggle" role="group" data-i18n-label="lang.group" aria-label="Language"></div>
+      <a class="nav-link" href="trip.html" data-i18n="nav.trip">Plan a trip</a>
+      <a class="back-link" href="./" data-i18n="nav.back">← Back to the forecast</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" style="padding: 22px 0 64px; display: grid; gap: 18px;">
+  <section class="card doc-hero">
+    <h1 data-i18n="links.h1">What a forecast cannot tell you</h1>
+    <p class="lede" data-i18n="links.lede">Whether the bulletin says the slab is reactive, whether the lift is turning, whether the road over to Storulvån is open, whether the hut is even staffed this month. None of it is weather, and all of it ends a plan.</p>
+    <div class="pill-row">
+      <span class="pill" id="links-count"></span>
+      <span class="pill" id="links-verified"></span>
+    </div>
+  </section>
+
+  <div id="resources" class="doc"></div>
+
+  <footer class="footer">
+    <p data-i18n-html="links.disclaimer">These are other people's sites. They are linked because they are useful, not because anything here is affiliated with them.</p>
+    <p data-i18n-html="footer.attributionShort">placeholder</p>
+  </footer>
+</main>
+<script type="module" src="js/links.js"></script>
+</body>
+</html>

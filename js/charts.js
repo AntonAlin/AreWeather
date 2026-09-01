@@ -1,7 +1,7 @@
 /* Hand-rolled SVG visualisation. No chart library: every mark here needs to
    know about elevation, phase or wind, and generic charting tools fight that. */
 
-import { svgEl, tempColor, windColor, precipColor, clamp, lerp, fmtHour, fmtShortDay, fmtWind, dec } from './util.js';
+import { svgEl, tempColor, windColor, precipColor, clamp, lerp, fmtHour, fmtShortDay, fmtWind, compass, dec } from './util.js';
 import { t } from './i18n.js';
 
 const AXIS = '#66717f';
@@ -396,4 +396,143 @@ export function renderHourly(container, model, { bandZ, hours = 48, unit = 'ms',
     marker.setAttribute('x1', x(i)); marker.setAttribute('x2', x(i));
     onPick?.(i);
   });
+}
+
+/* ---------- 4. aspect rose ----------
+   Eight sectors of the mountain, coloured by whichever question is being
+   asked: where is it calm, where is the wind loading snow, where is the sun. */
+export function renderAspectRose(container, aspects, { lens = 'wind', unit = 'ms', wind, sun, size = 260 }) {
+  const svg = frame(container, size, size, t(`aspect.aria.${lens}`));
+  const cx = size / 2;
+  const cy = size / 2;
+  const rOuter = size * 0.42;
+  const rInner = size * 0.19;
+
+  const colourFor = (a) => {
+    if (lens === 'loading') {
+      if (!a.loading) return 'rgba(255,255,255,.05)';
+      return rampColour(a.loading / 100);
+    }
+    if (lens === 'sun') {
+      const s = clamp(a.sun / 0.6, 0, 1);
+      return s < 0.03 ? 'rgba(255,255,255,.05)' : `rgba(251,191,36,${0.12 + s * 0.72})`;
+    }
+    return windColor(a.wind);
+  };
+  const rampColour = (f) => {
+    const c = (a, b) => Math.round(lerp(a, b, clamp(f, 0, 1)));
+    return `rgb(${c(30, 251)},${c(58, 113)},${c(95, 133)})`;
+  };
+
+  const arc = (from, to, r0, r1) => {
+    const a0 = ((from - 90) * Math.PI) / 180;
+    const a1 = ((to - 90) * Math.PI) / 180;
+    const p = (r, a) => `${cx + r * Math.cos(a)} ${cy + r * Math.sin(a)}`;
+    return `M ${p(r0, a0)} L ${p(r1, a0)} A ${r1} ${r1} 0 0 1 ${p(r1, a1)} L ${p(r0, a1)} A ${r0} ${r0} 0 0 0 ${p(r0, a0)} Z`;
+  };
+
+  aspects.forEach((a) => {
+    const half = 22.5;
+    svgEl('path', {
+      d: arc(a.bearing - half, a.bearing + half, rInner, rOuter),
+      fill: colourFor(a),
+      stroke: 'rgba(6,8,11,.85)',
+      'stroke-width': 2,
+    }, svg);
+    const mid = ((a.bearing - 90) * Math.PI) / 180;
+    const rLabel = (rInner + rOuter) / 2;
+    const value = lens === 'loading' ? String(a.loading)
+      : lens === 'sun' ? `${Math.round(clamp(a.sun / 0.6, 0, 1) * 100)}`
+        : fmtWind(a.wind, unit);
+    text(svg, cx + rLabel * Math.cos(mid), cy + rLabel * Math.sin(mid) + 3.5, value, {
+      size: 10, anchor: 'middle', fill: 'rgba(255,255,255,.92)', weight: 600,
+    });
+    text(svg, cx + (rOuter + 13) * Math.cos(mid), cy + (rOuter + 13) * Math.sin(mid) + 3.5, compass(a.bearing), {
+      size: 9, anchor: 'middle', fill: '#66717f', weight: 600, tracking: .5,
+    });
+  });
+
+  /* Where the wind is coming from, drawn as an arrow into the middle. */
+  if (Number.isFinite(wind?.dir)) {
+    const from = ((wind.dir - 90) * Math.PI) / 180;
+    const tail = rInner - 4;
+    svgEl('line', {
+      x1: cx + tail * Math.cos(from), y1: cy + tail * Math.sin(from),
+      x2: cx - (rInner - 12) * Math.cos(from), y2: cy - (rInner - 12) * Math.sin(from),
+      stroke: '#4fd1ff', 'stroke-width': 2.5, 'stroke-linecap': 'round',
+    }, svg);
+    svgEl('circle', { cx: cx + tail * Math.cos(from), cy: cy + tail * Math.sin(from), r: 3.5, fill: '#4fd1ff' }, svg);
+    text(svg, cx, cy - 4, fmtWind(wind.speed, unit), { size: 13, anchor: 'middle', fill: '#eef2f7', weight: 600 });
+    text(svg, cx, cy + 8, `${unit === 'kmh' ? 'km/h' : 'm/s'} ${compass(wind.dir)}`, { size: 8, anchor: 'middle', fill: '#66717f' });
+  }
+
+  /* And where the sun is, if it is up. */
+  if (sun && sun.elevation > 0) {
+    const a = ((sun.azimuth - 90) * Math.PI) / 180;
+    const r = rOuter + 26;
+    svgEl('circle', { cx: cx + r * Math.cos(a), cy: cy + r * Math.sin(a), r: 5, fill: '#fbbf24' }, svg);
+    text(svg, cx + r * Math.cos(a), cy + r * Math.sin(a) + 15, `${Math.round(sun.elevation)}°`, {
+      size: 8, anchor: 'middle', fill: '#fbbf24',
+    });
+  }
+}
+
+/* ---------- 5. the year, week by week ---------- */
+export function renderClimateYear(container, weeks, { width = 760, todayDoy, label }) {
+  const height = 190;
+  const pad = { l: 34, r: 34, t: 16, b: 30 };
+  const svg = frame(container, width, height, label);
+  const plotW = width - pad.l - pad.r;
+  const plotH = height - pad.t - pad.b;
+  const valid = weeks.filter(Boolean);
+  if (!valid.length) return;
+
+  const lo = Math.floor(Math.min(...valid.map((w) => w.tminP10)) - 2);
+  const hi = Math.ceil(Math.max(...valid.map((w) => w.tmaxP90)) + 2);
+  const x = (w) => pad.l + ((w - 1) / 51) * plotW;
+  const y = (v) => pad.t + (1 - (v - lo) / (hi - lo)) * plotH;
+
+  for (let v = Math.ceil(lo / 10) * 10; v <= hi; v += 10) {
+    svgEl('line', { x1: pad.l, y1: y(v), x2: width - pad.r, y2: y(v), stroke: v === 0 ? 'rgba(251,191,36,.35)' : GRID, 'stroke-dasharray': v === 0 ? '4 4' : '2 6' }, svg);
+    text(svg, pad.l - 6, y(v) + 3.5, `${dec(v, 0)}°`, { size: 9, anchor: 'end' });
+  }
+
+  /* p10–p90 envelope, then the median day/night band on top of it. */
+  const band = (upper, lower, fill) => {
+    const up = valid.map((w) => `${x(w.week)} ${y(upper(w))}`);
+    const dn = [...valid].reverse().map((w) => `${x(w.week)} ${y(lower(w))}`);
+    svgEl('path', { d: `M ${[...up, ...dn].join(' L ')} Z`, fill, stroke: 'none' }, svg);
+  };
+  band((w) => w.tmaxP90, (w) => w.tminP10, 'rgba(79,209,255,.12)');
+  band((w) => w.tmax, (w) => w.tmin, 'rgba(79,209,255,.30)');
+
+  const line = (pick, stroke, dash) => svgEl('polyline', {
+    points: valid.map((w) => `${x(w.week)},${y(pick(w))}`).join(' '),
+    fill: 'none', stroke, 'stroke-width': 1.8, 'stroke-dasharray': dash ?? 'none', 'stroke-linejoin': 'round',
+  }, svg);
+  line((w) => w.tmax, '#4fd1ff');
+  line((w) => w.tmin, '#a78bfa');
+
+  /* Snow weeks along the bottom, so the season is visible at a glance. */
+  const maxSnow = Math.max(1, ...valid.map((w) => w.snow));
+  valid.forEach((w) => {
+    if (w.snow < 0.5) return;
+    const h = (w.snow / maxSnow) * (plotH * 0.28);
+    svgEl('rect', {
+      x: x(w.week) - plotW / 104, y: pad.t + plotH - h, width: Math.max(2, plotW / 52 - 1), height: h,
+      fill: 'rgba(224,242,254,.5)', rx: 1,
+    }, svg);
+  });
+
+  /* Month ticks. */
+  const monthStarts = [1, 5, 9, 14, 18, 23, 27, 31, 36, 40, 44, 49];
+  monthStarts.forEach((w, i) => {
+    text(svg, x(w), height - pad.b + 14, t(`month.${i}`), { size: 8.5, anchor: 'middle', fill: '#66717f', mono: false });
+  });
+
+  if (Number.isFinite(todayDoy)) {
+    const week = clamp(Math.ceil(todayDoy / 7), 1, 52);
+    svgEl('line', { x1: x(week), y1: pad.t, x2: x(week), y2: pad.t + plotH, stroke: 'rgba(255,255,255,.75)', 'stroke-width': 1.5 }, svg);
+    text(svg, x(week), pad.t - 4, t('climate.now'), { size: 8, anchor: 'middle', fill: '#fff', weight: 700, tracking: 1 });
+  }
 }

@@ -712,3 +712,234 @@ export const CONTACT = {
     iterations: 310000,
   },
 };
+
+/* ---------------------------------------------------------------------------
+   Other people's pages.
+
+   A forecast is not the only thing that decides whether a day happens. The
+   avalanche bulletin, whether the lift is turning, whether the road over to
+   Storulvån is open, whether the hut is even staffed this month — none of that
+   is weather, and all of it ends a plan.
+
+   Links were checked on the date in `verified`. If one has moved, it has moved.
+--------------------------------------------------------------------------- */
+export const RESOURCES = {
+  verified: '2026-08-31',
+  groups: [
+    {
+      id: 'safety',
+      title: { en: 'Avalanche and safety', sv: 'Lavin och säkerhet' },
+      intro: {
+        en: 'Read the bulletin before you go, every time. This app models the weather that builds a slab; it does not assess a snowpack.',
+        sv: 'Läs lavinprognosen innan du åker, varje gång. Den här appen modellerar vädret som bygger flaksnö; den bedömer inte snötäcket.',
+      },
+      items: [
+        {
+          name: 'Lavinprognoser.se — Södra Jämtlandsfjällen',
+          url: 'https://www.lavinprognoser.se/oversikt-alla-omraden/sodra_jamtlandsfjallen/',
+          note: {
+            en: 'The official Swedish avalanche forecast for the region covering Åre, Storulvån, Sylarna and Bydalen — every peak in this app. Published daily in season by Naturvårdsverket.',
+            sv: 'Den officiella svenska lavinprognosen för området som täcker Åre, Storulvån, Sylarna och Bydalen — alla toppar i den här appen. Publiceras dagligen under säsong av Naturvårdsverket.',
+          },
+          primary: true,
+        },
+        {
+          name: 'Lavinprognoser.se — Västra Härjedalsfjällen',
+          url: 'https://www.lavinprognoser.se/oversikt-alla-omraden/vastra_harjedalsfjallen/',
+          note: {
+            en: 'The neighbouring forecast region to the south — Funäsdalen, Ramundberget, Helags. Worth reading if you are driving that way.',
+            sv: 'Grannområdet söderut — Funäsdalen, Ramundberget, Helags. Värt att läsa om du kör åt det hållet.',
+          },
+        },
+        {
+          name: 'Naturvårdsverket — Säkerhet i fjällen',
+          url: 'https://www.naturvardsverket.se/amnesomraden/friluftsliv/sakerhet-i-fjallen/',
+          note: {
+            en: 'Mountain safety, avalanche training and the reasoning behind the national forecast programme.',
+            sv: 'Fjällsäkerhet, lavinutbildning och tankarna bakom det nationella prognosprogrammet.',
+          },
+        },
+        {
+          name: 'SOS Alarm — 112',
+          url: 'https://www.sosalarm.se/',
+          note: {
+            en: 'Emergencies, including mountain rescue (fjällräddningen). Ask for it by name. Coverage in the fjäll is patchy — an SMS to 112 needs prior registration, so do that before the trip.',
+            sv: 'Nödsituationer, inklusive fjällräddningen. Be om den vid namn. Täckningen i fjällen är ojämn — sms till 112 kräver att du registrerat dig i förväg, så gör det före turen.',
+          },
+        },
+      ],
+    },
+    {
+      id: 'live',
+      title: { en: 'Webcams and live conditions', sv: 'Webbkameror och läget just nu' },
+      intro: {
+        en: 'A forecast is a claim about the future. A camera is a fact about the present, and often settles the argument faster.',
+        sv: 'En prognos är ett påstående om framtiden. En kamera är ett faktum om nuet, och avgör ofta saken snabbare.',
+      },
+      items: [
+        {
+          name: { en: 'SkiStar Åre — weather, slopes and webcams', sv: 'SkiStar Åre — väder, backar och webbkameror' },
+          url: 'https://www.skistar.com/sv/vara-skidorter/are/vinter-i-are/vader-och-backar/',
+          note: {
+            en: 'Live webcams across the resort, snow depth, and which lifts and slopes are actually open right now.',
+            sv: 'Direktsända webbkameror i hela anläggningen, snödjup, och vilka liftar och backar som faktiskt är öppna just nu.',
+          },
+          primary: true,
+        },
+        {
+          name: { en: 'Trafikverket — road traffic map', sv: 'Trafikverket — trafikkarta för väg' },
+          url: 'https://www.trafikverket.se/trafikinformation/vag/',
+          note: {
+            en: 'Road cameras and conditions along the E14 and the roads into the fjäll. The camera at a weather station points at the road surface, which tells you more about the drive than any forecast.',
+            sv: 'Vägkameror och väglag längs E14 och vägarna in mot fjället. Kameran vid en väderstation är riktad mot vägbanan, vilket säger mer om körningen än någon prognos.',
+          },
+        },
+      ],
+    },
+    {
+      id: 'lifts',
+      title: { en: 'Lifts and opening hours', sv: 'Liftar och öppettider' },
+      intro: {
+        en: 'This app estimates when wind will hold the top lifts. Only SkiStar can tell you whether they are turning.',
+        sv: 'Den här appen uppskattar när vinden stoppar topplifterna. Bara SkiStar kan säga om de faktiskt går.',
+      },
+      items: [
+        {
+          name: { en: 'Lift opening hours, winter', sv: 'Liftarnas öppettider, vinter' },
+          url: 'https://www.skistar.com/sv/vara-skidorter/are/vinter-i-are/vader-och-backar/liftarnas-oppettider/',
+          note: {
+            en: 'Opening hours for every lift in Åre, Åre Björnen, Duved and Tegefjäll, from opening day to the end of the season.',
+            sv: 'Öppettider för varje lift i Åre, Åre Björnen, Duved och Tegefjäll, från öppningsdagen till säsongens slut.',
+          },
+          primary: true,
+        },
+        {
+          name: { en: 'Summer opening hours and the bike park', sv: 'Sommaröppettider och cykelparken' },
+          url: 'https://www.skistar.com/sv/vara-skidorter/are/sommar-i-are/oppettider/',
+          note: {
+            en: 'The Kabinbanan, the bike park and summer activities. The downhill scores in this app assume the park is open — check here first.',
+            sv: 'Kabinbanan, cykelparken och sommaraktiviteter. Cykelbetygen i appen förutsätter att parken är öppen — kolla här först.',
+          },
+        },
+      ],
+    },
+    {
+      id: 'huts',
+      title: { en: 'Huts and trails', sv: 'Stugor och leder' },
+      intro: {
+        en: 'The mountain stations are not open all year, and the seasons have been getting shorter. Check before you plan a traverse around them.',
+        sv: 'Fjällstationerna är inte öppna året runt, och säsongerna har blivit kortare. Kontrollera innan du planerar en tur runt dem.',
+      },
+      items: [
+        {
+          name: 'STF Storulvån',
+          url: 'https://www.svenskaturistforeningen.se/boende/stf-storulvan-fjallstation/',
+          note: {
+            en: 'The road-accessible corner of the Jämtland triangle, and the usual start for Storsnasen and Getryggen.',
+            sv: 'Det hörn av Jämtlandstriangeln som nås med bil, och den vanliga starten för Storsnasen och Getryggen.',
+          },
+        },
+        {
+          name: 'STF Sylarna',
+          url: 'https://www.svenskaturistforeningen.se/boende/stf-sylarna-fjallstation/',
+          note: { en: 'Under Storsylen, deep in the range and a long way from a road.', sv: 'Under Storsylen, långt inne i fjällen och långt från väg.' },
+        },
+        {
+          name: 'STF Blåhammaren',
+          url: 'https://www.svenskaturistforeningen.se/boende/stf-blahammaren/',
+          note: {
+            en: 'Sweden\'s highest mountain station. Services have been cut back in recent years — the kitchen is no longer what it was.',
+            sv: 'Sveriges högst belägna fjällstation. Servicen har dragits ned de senaste åren — köket är inte vad det var.',
+          },
+        },
+        {
+          name: 'Jämtlandstriangeln',
+          url: 'https://www.jamtlandstriangeln.se/',
+          note: {
+            en: 'The classic three-day circuit between Storulvån, Sylarna and Blåhammaren — the reason most visitors come here on foot.',
+            sv: 'Den klassiska tredagarsrundan mellan Storulvån, Sylarna och Blåhammaren — anledningen till att de flesta besökare kommer hit till fots.',
+          },
+          primary: true,
+        },
+      ],
+    },
+    {
+      id: 'local',
+      title: { en: 'Local knowledge and etiquette', sv: 'Lokal kunskap och hänsyn' },
+      intro: {
+        en: 'These are working reindeer grazing lands, not a park. Knowing that is the difference between a visitor and a guest.',
+        sv: 'Det här är renbetesmarker i bruk, inte en park. Att veta det är skillnaden mellan en besökare och en gäst.',
+      },
+      items: [
+        {
+          name: { en: 'Åre kommun — changes in the western Jämtland fjäll', sv: 'Åre kommun — förändringar i västra Jämtlandsfjällen' },
+          url: 'https://are.se/uppleva-och-gora/natur-och-friluftsliv/vandring/forandringar-i-vastra-jamtlandsfjallen',
+          note: {
+            en: 'Why hut seasons and services have been reduced, and what is being asked of visitors in the reindeer herding areas.',
+            sv: 'Varför stugsäsonger och service dragits ned, och vad som förväntas av besökare i renskötselområdena.',
+          },
+          primary: true,
+        },
+        {
+          name: { en: 'Länsstyrelsen Jämtland — nature and outdoor life', sv: 'Länsstyrelsen Jämtland — natur och friluftsliv' },
+          url: 'https://www.lansstyrelsen.se/jamtland/besoksmal/naturreservat.html',
+          note: {
+            en: 'Reserves, protected areas and the local rules that apply inside them.',
+            sv: 'Naturreservat, skyddade områden och de regler som gäller i dem.',
+          },
+        },
+        {
+          name: { en: 'Naturvårdsverket — the right of public access', sv: 'Naturvårdsverket — allemansrätten' },
+          url: 'https://www.naturvardsverket.se/amnesomraden/allemansratten/',
+          note: {
+            en: 'What you may and may not do. Do not disturb, do not destroy — and in the fjäll, give reindeer a very wide berth.',
+            sv: 'Vad du får och inte får göra. Inte störa, inte förstöra — och i fjällen: håll gott om avstånd till renar.',
+          },
+        },
+      ],
+    },
+    {
+      id: 'official',
+      title: { en: 'Official forecasts and warnings', sv: 'Officiella prognoser och varningar' },
+      intro: {
+        en: 'This app is not an authority and issues no warnings. When SMHI has something to say, it outranks anything here.',
+        sv: 'Den här appen är ingen myndighet och utfärdar inga varningar. När SMHI säger något väger det tyngre än allt här.',
+      },
+      items: [
+        {
+          name: { en: 'SMHI — warnings and forecasts', sv: 'SMHI — varningar och prognoser' },
+          url: 'https://www.smhi.se/vader',
+          note: {
+            en: 'The Swedish national weather service. Official warnings for wind, snow and ice, and the mountain forecast for the fjäll.',
+            sv: 'Sveriges meteorologiska och hydrologiska institut. Officiella vädervarningar för vind, snö och is, samt fjällprognosen.',
+          },
+          primary: true,
+        },
+        {
+          name: 'Yr — MET Norway',
+          url: 'https://www.yr.no/',
+          note: {
+            en: 'The Norwegian service, whose MET Nordic model this app already leans on most heavily. A useful second opinion in plain form.',
+            sv: 'Den norska tjänsten, vars modell MET Nordic den här appen redan väger tyngst. En användbar andra åsikt i enkel form.',
+          },
+        },
+        {
+          name: 'Open-Meteo',
+          url: 'https://open-meteo.com/',
+          note: {
+            en: 'The aggregator every forecast on this site comes through. Their own charts are worth a look if you want the raw model output.',
+            sv: 'Aggregatorn som alla prognoser på sajten går genom. Deras egna diagram är värda en titt om du vill se rå modellutdata.',
+          },
+        },
+        {
+          name: { en: 'SMHI open data — observations', sv: 'SMHI öppna data — observationer' },
+          url: 'https://opendata.smhi.se/metobs/introduction',
+          note: {
+            en: 'The station readings behind the ground-truth panel, if you want to query them yourself.',
+            sv: 'Stationsavläsningarna bakom panelen Verkligheten, om du vill hämta dem själv.',
+          },
+        },
+      ],
+    },
+  ],
+};

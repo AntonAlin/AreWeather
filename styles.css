@@ -469,3 +469,56 @@ td.cell-wrap { padding: 3px; min-width: 78px; }
 
 /* language switch sits in the header alongside the unit toggle */
 #lang-toggle button { min-width: 34px; letter-spacing: .06em; font-weight: 600; }
+
+/* ---------- aspect rose ---------- */
+.aspect-wrap { display: grid; grid-template-columns: auto minmax(0, 440px); gap: 26px; align-items: center; justify-content: start; }
+@media (max-width: 620px) { .aspect-wrap { grid-template-columns: 1fr; } .aspect-rose { justify-self: center; } }
+.aspect-side { display: grid; gap: 2px; align-content: start; }
+.aspect-line { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line-soft); }
+.aspect-line:last-of-type { border-bottom: 0; }
+.aspect-line .k { font-size: .74rem; color: var(--text-2); }
+.aspect-line .v { font-family: var(--mono); font-size: .88rem; font-weight: 600; color: var(--text); letter-spacing: .02em; }
+.aspect-line.good .v { color: var(--lime); }
+.aspect-line.warn .v { color: var(--amber); }
+.aspect-line.danger .v { color: var(--rose); }
+#climate-year svg { display: block; }
+
+/* ---------- resources ---------- */
+.link-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; }
+.link-item {
+  display: block; text-decoration: none; color: inherit; padding: 13px 15px;
+  border: 1px solid var(--line-soft); border-radius: var(--radius-sm);
+  background: rgba(255,255,255,.025); transition: .18s; position: relative; overflow: hidden;
+}
+.link-item:hover { background: rgba(255,255,255,.07); border-color: var(--line); transform: translateY(-1px); }
+.link-item.primary { border-color: rgba(79,209,255,.3); background: rgba(79,209,255,.05); }
+.link-item.primary::after { content: ''; position: absolute; inset: 0 auto 0 0; width: 2px; background: var(--ice); }
+.link-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.link-name { font-size: .86rem; font-weight: 600; letter-spacing: -.015em; }
+.link-item:hover .link-name { color: var(--ice); }
+.link-host { font-family: var(--mono); font-size: .6rem; color: var(--text-3); white-space: nowrap; }
+.link-note { margin: 6px 0 0; font-size: .76rem; color: var(--text-2); line-height: 1.5; }
+
+/* ---------- trip planner ---------- */
+.trip-form { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 14px; }
+.trip-field { display: grid; gap: 5px; }
+.trip-field span { font-size: .6rem; letter-spacing: .18em; text-transform: uppercase; color: var(--text-3); }
+.trip-field input {
+  background: rgba(0,0,0,.35); border: 1px solid var(--line); border-radius: 10px;
+  padding: 9px 12px; color: var(--text); font-family: var(--mono); font-size: .84rem;
+  color-scheme: dark; transition: .18s;
+}
+.trip-field input:focus { outline: none; border-color: rgba(79,209,255,.6); box-shadow: 0 0 0 3px rgba(79,209,255,.14); }
+.trip-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.preset {
+  background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: 999px;
+  padding: 7px 14px; font-size: .74rem; color: var(--text-2); transition: .18s;
+}
+.preset:hover { color: #fff; border-color: rgba(255,255,255,.26); background: rgba(255,255,255,.09); }
+.trip-count { font-size: .86rem; color: var(--text-2); margin: 0; }
+.trip-count b { color: var(--text); }
+.trip-day .picks { margin-top: 2px; }
+.pack-list { margin: 16px 0 0; padding-left: 20px; display: grid; gap: 8px; }
+.pack-list li { font-size: .84rem; color: var(--text-2); line-height: 1.55; }
+.pack-list li b { color: var(--text); font-weight: 600; }
+.pack-list::marker, .pack-list li::marker { color: var(--ice); }
