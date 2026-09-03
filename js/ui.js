@@ -1,7 +1,7 @@
 /* Panel rendering. Everything reads from the assembled forecast model; nothing
    here recomputes meteorology. */
 
-import { el, $, fmtWind, windUnitLabel, compass, fmtClock, fmtWeekday, fmtDayMonth, scoreColor, rampCss, TEMP_STOPS, WIND_STOPS, ago, dec } from './util.js';
+import { el, $, fmtWind, windUnitLabel, compass, fmtClock, fmtWeekday, fmtDayMonth, scoreColor, rampCss, TEMP_STOPS, WIND_STOPS, PRECIP_STOPS, ago, dec } from './util.js';
 import { bestWindow } from './forecast.js';
 import { solarPosition, utcFromWallClock, aspectAnalysis, aspectAdvice } from './physics.js';
 import { renderAspectRose, renderClimateYear } from './charts.js';
@@ -544,20 +544,24 @@ export function renderLegend(node, metric, unit) {
     el('span', { text: `0 ${windUnitLabel(unit)}` }, scale);
     const bar = el('div', { class: 'bar' }, scale);
     bar.style.background = rampCss(WIND_STOPS);
-    el('span', { text: unit === 'kmh' ? '144' : '40' }, scale);
+    const top = WIND_STOPS[WIND_STOPS.length - 1][0];
+    el('span', { text: `${dec(unit === 'kmh' ? top * 3.6 : top, 0)}` }, scale);
   } else if (metric === 'precip') {
     el('span', { text: t('legend.dry') }, scale);
     const bar = el('div', { class: 'bar' }, scale);
-    bar.style.background = 'linear-gradient(90deg, rgba(255,255,255,.05), #164e63, #1d4ed8, #a21caf)';
+    bar.style.background = rampCss(PRECIP_STOPS);
     el('span', { text: t('legend.rain') }, scale);
     const bar2 = el('div', { class: 'bar' }, scale);
     bar2.style.background = 'linear-gradient(90deg, #1e3a5f, #e0f2fe)';
     el('span', { text: t('legend.snow') }, scale);
   } else {
-    el('span', { text: '−30°' }, scale);
+    /* Read the ends off the ramp itself. A legend with its numbers typed in by
+       hand stops describing the scale the moment the scale is re-tuned, which
+       is exactly what had happened here. */
+    el('span', { text: `${dec(TEMP_STOPS[0][0], 0)}°` }, scale);
     const bar = el('div', { class: 'bar' }, scale);
     bar.style.background = rampCss(TEMP_STOPS);
-    el('span', { text: '+30°' }, scale);
+    el('span', { text: `+${dec(TEMP_STOPS[TEMP_STOPS.length - 1][0], 0)}°` }, scale);
   }
   const keys = el('div', { class: 'legend' }, node);
   keys.style.gap = '12px';

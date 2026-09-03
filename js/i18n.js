@@ -1503,6 +1503,22 @@ export const STRINGS = {
   'm.warm.th.year': { en: 'A winter year starts in this month, so one winter is never split in two', sv: 'Ett vinterår börjar den här månaden, så att en vinter aldrig delas i två' },
   'm.warm.th.lapse': { en: 'Lapse rate used to move the grid cell to each elevation, °C per 100 m', sv: 'Temperaturgradient som flyttar rutan till varje höjd, °C per 100 m' },
 
+  /* ---------- chart tooltips ---------- */
+  'aspect.tip.wind': { en: 'Wind on this side', sv: 'Vind på den här sidan' },
+  'aspect.tip.loading': { en: 'Wind loading', sv: 'Drivbildning' },
+  'aspect.tip.sun': { en: 'Sun on the slope', sv: 'Sol på sluttningen' },
+  'climate.tip.week': { en: 'Week {n}, normally', sv: 'Vecka {n}, normalt' },
+  'climate.tip.day': { en: 'By day', sv: 'Dagtid' },
+  'climate.tip.night': { en: 'At night', sv: 'Nattetid' },
+  'climate.tip.wind': { en: 'Wind', sv: 'Vind' },
+  'climate.tip.snow': { en: 'Snowfall that week', sv: 'Snöfall den veckan' },
+  'warm.tip.threshold': { en: 'Test', sv: 'Gräns' },
+  'out.tip.members': { en: 'Members', sv: 'Medlemmar' },
+  'out.tip.outOf': { en: '{k} of {n}', sv: '{k} av {n}' },
+  'out.tip.p90': { en: 'Top tenth', sv: 'Översta tiondelen' },
+  'out.tip.median': { en: 'Median', sv: 'Median' },
+  'out.tip.p10': { en: 'Bottom tenth', sv: 'Nedersta tiondelen' },
+
   /* ---------- the outlook page ---------- */
   'page.outlook.title': { en: 'Chances, not promises — ÅreWeather', sv: 'Chanser, inte löften — ÅreWeather' },
   'page.outlook.description': {

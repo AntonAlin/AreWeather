@@ -235,6 +235,38 @@ sw.js               offline app shell
 tools/selftest.mjs  offline physics + ML test harness
 ```
 
+## Colour, and why the ramps look the way they do
+
+Every colour scale on the site encodes one job, and the job picks the structure.
+
+- **Temperature is the only diverging scale**, because it is the only variable with a
+  natural midpoint: cold blue and warm red either side of a neutral grey at exactly 0 °C.
+  That is not decoration — the freezing line decides rain against snow and ice against
+  grip, so it is where the colour goes quiet.
+- **Wind, precipitation, snow loading and sunlight are magnitude**, so each is a single
+  hue running dim to bright. Danger is carried by the numbers and the status colours
+  beside them, never by a hue change inside a ramp.
+- **No rainbows anywhere.** A reader can rank lightness but not hue: green is not
+  "between" blue and yellow to anybody, so a rainbow forces a legend lookup for every
+  single cell. All three of the original ramps were rainbows and all three are gone.
+- **The anchors are fixed, not fitted to each day.** A colour means the same thing on
+  every peak and every page, which is what makes the comparison grid readable. They are
+  spaced for the range a Swedish mountain actually occupies — full chroma by about
+  ±16 °C, not ±30 — or an ordinary winter day would spend the whole palette on two
+  indistinguishable slates.
+- **Ink follows the fill.** Cell labels pick black or white from the relative luminance
+  of what is behind them, so a value stays readable at both ends of a ramp.
+
+Every step was generated as an OKLCH ladder and checked for monotone lightness, a
+visible gap between steps, a single hue per arm, and contrast against the card surface —
+not chosen by eye. Legends read their own end labels off the ramp arrays, so a legend
+cannot drift out of sync with the scale it describes. If you retune a ramp in
+[`js/util.js`](js/util.js), re-run those checks rather than trusting the preview.
+
+Gridlines are solid hairlines. Dashes are reserved for lines that mean something — the
+freezing level, the snow line, a threshold, the boundary where a projection begins —
+so that a dashed line on this site is always a claim, never furniture.
+
 ## Languages
 
 The site is fully bilingual, English and Swedish. It opens in Swedish for a Swedish browser and in

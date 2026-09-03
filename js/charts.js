@@ -1,11 +1,70 @@
 /* Hand-rolled SVG visualisation. No chart library: every mark here needs to
    know about elevation, phase or wind, and generic charting tools fight that. */
 
-import { svgEl, tempColor, windColor, precipColor, clamp, lerp, fmtHour, fmtShortDay, fmtWind, compass, dec, parseLocal } from './util.js';
+import { svgEl, tempColor, windColor, precipColor, snowLoadColor, sunColor, inkOn, clamp, lerp, fmtHour, fmtShortDay, fmtWind, compass, dec, parseLocal } from './util.js';
 import { t } from './i18n.js';
 
 const AXIS = '#66717f';
-const GRID = 'rgba(255,255,255,.10)';
+const EMPTY_SECTOR = 'rgba(255,255,255,.05)';
+/* One shade off the surface, solid: a dashed grid reads as a threshold, and
+   this site has real thresholds to draw. */
+const GRID = 'rgba(255,255,255,.07)';
+
+
+/* ---------- hover ----------
+   An SVG chart in a browser is an interactive object, and a mark you cannot
+   interrogate is a picture of a chart. One tooltip node serves every chart on
+   the page; `hoverable` attaches it to any mark and also leaves an accessible
+   name behind, so the value is reachable without a pointer. */
+let tipNode = null;
+function tipEl() {
+  if (tipNode?.isConnected) return tipNode;
+  tipNode = document.getElementById('tooltip');
+  if (!tipNode) {
+    tipNode = document.createElement('div');
+    tipNode.id = 'tooltip';
+    tipNode.className = 'tooltip';
+    tipNode.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(tipNode);
+  }
+  return tipNode;
+}
+
+/** Strip markup for the accessible name, keeping the separators readable. */
+const plain = (html) => html
+  .replace(/<\/span>\s*<span>/g, ': ')   // key and value inside one row
+  .replace(/<\/(?:div|b)>/g, ' · ')      // row and title boundaries
+  .replace(/<[^>]*>/g, '')
+  .replace(/\s*·\s*$/, '')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+export function hoverable(mark, html, { label } = {}) {
+  if (!html) return mark;
+  const node = () => tipEl();
+  const place = (ev) => {
+    const el2 = node();
+    el2.innerHTML = html;
+    el2.classList.add('on');
+    const pad = 14;
+    const r = el2.getBoundingClientRect();
+    let x = ev.clientX + pad;
+    let y = ev.clientY + pad;
+    if (x + r.width > innerWidth - 8) x = ev.clientX - r.width - pad;
+    if (y + r.height > innerHeight - 8) y = ev.clientY - r.height - pad;
+    el2.style.left = `${Math.max(8, x)}px`;
+    el2.style.top = `${Math.max(8, y)}px`;
+  };
+  mark.addEventListener('pointerenter', place);
+  mark.addEventListener('pointermove', place);
+  mark.addEventListener('pointerleave', () => node().classList.remove('on'));
+  mark.setAttribute('aria-label', label ?? plain(html));
+  return mark;
+}
+
+/** The markup every tooltip on the site shares. */
+export const tipTitle = (s2) => `<b>${s2}</b>`;
+export const tipRow = (k, v) => `<div class="row"><span>${k}</span><span>${v}</span></div>`;
 
 /* ---------- shared ---------- */
 function frame(container, width, height, label) {
@@ -20,6 +79,7 @@ function frame(container, width, height, label) {
 const text = (parent, x, y, str, opts = {}) => svgEl('text', {
   x, y, fill: opts.fill ?? AXIS, 'font-size': opts.size ?? 10,
   'font-family': opts.mono === false ? 'inherit' : 'JetBrains Mono, monospace',
+  'font-variant-numeric': opts.tabular === false ? 'normal' : 'tabular-nums',
   'text-anchor': opts.anchor ?? 'start', 'font-weight': opts.weight ?? 400,
   'letter-spacing': opts.tracking ?? 0, opacity: opts.opacity ?? 1,
 }, parent).appendChild(document.createTextNode(str)).parentNode;
@@ -107,14 +167,17 @@ export function renderMatrix(container, model, opts) {
     rows.forEach((z) => {
       const band = h.bands.find((b) => b.z === z);
       if (!band) return;
+      const paint = fill(band);
       svgEl('rect', {
         x: xOf(i) + 1, y: yOf(z) + 1, width: cw - 2, height: ch - 2, rx: 4,
-        fill: fill(band), opacity: h.daylight ? 1 : 0.86,
+        fill: paint, opacity: h.daylight ? 1 : 0.86,
       }, cells);
       if (metric !== 'precip' && Number.isFinite(value(band)) && (cw >= 26 || h.hour % 2 === 0)) {
         const v = metric === 'wind' ? fmtWind(band.wind, unit) : dec(value(band), 0);
+        /* The ends of these ramps are bright, so the ink has to follow the fill
+           rather than assume a dark one. */
         text(cells, xOf(i) + cw / 2, yOf(z) + ch / 2 + 3.2, String(v), {
-          size: 9, anchor: 'middle', fill: 'rgba(255,255,255,.86)', weight: 500,
+          size: 9, anchor: 'middle', fill: inkOn(paint), weight: 500,
         });
       }
       if (metric === 'precip' && band.precip >= 0.15 && cw >= 22) {
@@ -223,7 +286,7 @@ export function renderProfile(container, model, hourIndex, { unit = 'ms', width 
 
   /* elevation gridlines */
   for (let z = Math.ceil(zLo / 200) * 200; z <= zHi; z += 200) {
-    svgEl('line', { x1: pad.l, y1: y(z), x2: width - pad.r, y2: y(z), stroke: GRID, 'stroke-width': 1, 'stroke-dasharray': '2 5' }, svg);
+    svgEl('line', { x1: pad.l, y1: y(z), x2: width - pad.r, y2: y(z), stroke: GRID, 'stroke-width': 1 }, svg);
     text(svg, pad.l - 7, y(z) + 3.5, String(z), { size: 9, anchor: 'end' });
   }
   /* 0 °C isotherm */
@@ -314,7 +377,7 @@ export function renderHourly(container, model, { bandZ, hours = 48, unit = 'ms',
     svgEl('line', {
       x1: pad.l, y1: y(temp), x2: width - pad.r, y2: y(temp),
       stroke: temp === 0 ? 'rgba(251,191,36,.4)' : GRID, 'stroke-width': 1,
-      'stroke-dasharray': temp === 0 ? '4 4' : '2 6',
+      'stroke-dasharray': temp === 0 ? '4 4' : 'none',
     }, svg);
     text(svg, pad.l - 6, y(temp) + 3.5, `${dec(temp, 0)}°`, { size: 9, anchor: 'end' });
   }
@@ -408,20 +471,17 @@ export function renderAspectRose(container, aspects, { lens = 'wind', unit = 'ms
   const rOuter = size * 0.42;
   const rInner = size * 0.19;
 
+  /* Each lens is one magnitude in one hue: violet for wind, ice for the snow it
+     stacks up, amber for sunlight. A sector too small to matter stays empty
+     rather than taking the palest step, so "nothing here" and "a little here"
+     do not look the same. */
   const colourFor = (a) => {
-    if (lens === 'loading') {
-      if (!a.loading) return 'rgba(255,255,255,.05)';
-      return rampColour(a.loading / 100);
-    }
+    if (lens === 'loading') return a.loading ? snowLoadColor(a.loading) : EMPTY_SECTOR;
     if (lens === 'sun') {
       const s = clamp(a.sun / 0.6, 0, 1);
-      return s < 0.03 ? 'rgba(255,255,255,.05)' : `rgba(251,191,36,${0.12 + s * 0.72})`;
+      return s < 0.03 ? EMPTY_SECTOR : sunColor(s);
     }
     return windColor(a.wind);
-  };
-  const rampColour = (f) => {
-    const c = (a, b) => Math.round(lerp(a, b, clamp(f, 0, 1)));
-    return `rgb(${c(30, 251)},${c(58, 113)},${c(95, 133)})`;
   };
 
   const arc = (from, to, r0, r1) => {
@@ -433,19 +493,24 @@ export function renderAspectRose(container, aspects, { lens = 'wind', unit = 'ms
 
   aspects.forEach((a) => {
     const half = 22.5;
-    svgEl('path', {
+    const paint = colourFor(a);
+    const sector = svgEl('path', {
       d: arc(a.bearing - half, a.bearing + half, rInner, rOuter),
-      fill: colourFor(a),
+      fill: paint,
       stroke: 'rgba(6,8,11,.85)',
       'stroke-width': 2,
     }, svg);
+    hoverable(sector, tipTitle(`${compass(a.bearing)} · ${dec(a.bearing, 0)}°`)
+      + tipRow(t('aspect.tip.wind'), `${fmtWind(a.wind, unit)} ${unit === 'kmh' ? 'km/h' : 'm/s'}`)
+      + tipRow(t('aspect.tip.loading'), `${dec(a.loading, 0)}/100`)
+      + tipRow(t('aspect.tip.sun'), `${Math.round(clamp(a.sun / 0.6, 0, 1) * 100)}%`));
     const mid = ((a.bearing - 90) * Math.PI) / 180;
     const rLabel = (rInner + rOuter) / 2;
     const value = lens === 'loading' ? String(a.loading)
       : lens === 'sun' ? `${Math.round(clamp(a.sun / 0.6, 0, 1) * 100)}`
         : fmtWind(a.wind, unit);
     text(svg, cx + rLabel * Math.cos(mid), cy + rLabel * Math.sin(mid) + 3.5, value, {
-      size: 10, anchor: 'middle', fill: 'rgba(255,255,255,.92)', weight: 600,
+      size: 10, anchor: 'middle', fill: inkOn(paint), weight: 600,
     });
     text(svg, cx + (rOuter + 13) * Math.cos(mid), cy + (rOuter + 13) * Math.sin(mid) + 3.5, compass(a.bearing), {
       size: 9, anchor: 'middle', fill: '#66717f', weight: 600, tracking: .5,
@@ -493,7 +558,7 @@ export function renderClimateYear(container, weeks, { width = 760, todayDoy, lab
   const y = (v) => pad.t + (1 - (v - lo) / (hi - lo)) * plotH;
 
   for (let v = Math.ceil(lo / 10) * 10; v <= hi; v += 10) {
-    svgEl('line', { x1: pad.l, y1: y(v), x2: width - pad.r, y2: y(v), stroke: v === 0 ? 'rgba(251,191,36,.35)' : GRID, 'stroke-dasharray': v === 0 ? '4 4' : '2 6' }, svg);
+    svgEl('line', { x1: pad.l, y1: y(v), x2: width - pad.r, y2: y(v), stroke: v === 0 ? 'rgba(251,191,36,.35)' : GRID, 'stroke-dasharray': v === 0 ? '4 4' : 'none' }, svg);
     text(svg, pad.l - 6, y(v) + 3.5, `${dec(v, 0)}°`, { size: 9, anchor: 'end' });
   }
 
@@ -528,6 +593,20 @@ export function renderClimateYear(container, weeks, { width = 760, todayDoy, lab
   const monthStarts = [1, 5, 9, 14, 18, 23, 27, 31, 36, 40, 44, 49];
   monthStarts.forEach((w, i) => {
     text(svg, x(w), height - pad.b + 14, t(`month.${i}`), { size: 8.5, anchor: 'middle', fill: '#66717f', mono: false });
+  });
+
+  /* A full-height column per week, invisible but hoverable: the bars alone are
+     too small a target and the temperature band has no marks to aim at. */
+  valid.forEach((w) => {
+    const hit = svgEl('rect', {
+      x: x(w.week) - plotW / 104, y: pad.t, width: Math.max(3, plotW / 52),
+      height: plotH, fill: 'transparent',
+    }, svg);
+    hoverable(hit, tipTitle(t('climate.tip.week', { n: w.week }))
+      + tipRow(t('climate.tip.day'), `${dec(w.tmax, 0)}°`)
+      + tipRow(t('climate.tip.night'), `${dec(w.tmin, 0)}°`)
+      + tipRow(t('climate.tip.wind'), `${dec(w.wind, 0)} m/s`)
+      + tipRow(t('climate.tip.snow'), `${dec(w.snow, 0)} cm`));
   });
 
   if (Number.isFinite(todayDoy)) {
@@ -573,7 +652,7 @@ export function renderWarmingTrend(container, { rows, observed, metric, unit, th
   /* horizontal grid */
   const step = niceStep(hi - lo);
   for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
-    svgEl('line', { x1: pad.l, y1: y(v), x2: width - pad.r, y2: y(v), stroke: GRID, 'stroke-dasharray': '2 6' }, svg);
+    svgEl('line', { x1: pad.l, y1: y(v), x2: width - pad.r, y2: y(v), stroke: GRID }, svg);
     text(svg, pad.l - 6, y(v) + 3.5, `${dec(v, 0)}`, { size: 9, anchor: 'end' });
   }
   if (unit) text(svg, pad.l - 6, pad.t - 6, unit, { size: 8.5, anchor: 'end', tracking: 0.5 });
@@ -667,7 +746,7 @@ export function renderStaircase(container, bands, { threshold, thresholdLabel, u
 
   const step = niceStep(hi);
   for (let v = 0; v <= hi; v += step) {
-    svgEl('line', { x1: x(v), y1: pad.t - 6, x2: x(v), y2: height - pad.b + 2, stroke: GRID, 'stroke-dasharray': '2 6' }, svg);
+    svgEl('line', { x1: x(v), y1: pad.t - 6, x2: x(v), y2: height - pad.b + 2, stroke: GRID }, svg);
     text(svg, x(v), height - pad.b + 16, `${dec(v, 0)}`, { size: 9, anchor: 'middle' });
   }
   if (unit) text(svg, width - pad.r, pad.t - 12, unit, { size: 8.5, anchor: 'end', tracking: 0.5 });
@@ -687,11 +766,17 @@ export function renderStaircase(container, bands, { threshold, thresholdLabel, u
       if (!Number.isFinite(p.value)) return;
       const end = x(p.value);
       svgEl('rect', { x: pad.l, y: yy, width: Math.max(2, end - pad.l), height: barH, fill: COLORS[p.id], rx: 3 }, svg);
+      /* The bar itself is 8px tall, which is not a hit target. The hoverable is
+         a transparent band across the whole row-slot instead. */
+      const hit = svgEl('rect', { x: pad.l, y: yy - 2, width: plotW, height: barH + 4, fill: 'transparent' }, svg);
+      hoverable(hit, tipTitle(`${band.z} m · ${t(`warm.period.${p.id}`)}`)
+        + tipRow(unit ?? '', dec(p.value, 0))
+        + (Number.isFinite(threshold) ? tipRow(t('warm.tip.threshold'), dec(threshold, 0)) : ''));
       /* The label sits after the bar while there is room for it, and moves
          inside the bar's own end once the bar runs close to the axis. */
       const outside = end + 30 < width - pad.r;
       text(svg, outside ? end + 6 : end - 5, yy + barH - 0.5, dec(p.value, 0),
-        { size: 8.5, anchor: outside ? 'start' : 'end', fill: outside ? '#8b95a5' : 'rgba(6,8,11,.8)', weight: outside ? 400 : 600 });
+        { size: 8.5, anchor: outside ? 'start' : 'end', fill: outside ? '#8b95a5' : inkOn(COLORS[p.id]), weight: outside ? 400 : 600 });
     });
   });
 
@@ -739,7 +824,7 @@ export function renderFan(container, { fan, lines, unit, label, zero = false, wi
     const isZero = Math.abs(v) < 1e-9;
     svgEl('line', {
       x1: pad.l, y1: y(v), x2: width - pad.r, y2: y(v),
-      stroke: isZero ? 'rgba(251,191,36,.35)' : GRID, 'stroke-dasharray': isZero ? '4 4' : '2 6',
+      stroke: isZero ? 'rgba(251,191,36,.35)' : GRID, 'stroke-dasharray': isZero ? '4 4' : 'none',
     }, svg);
     text(svg, pad.l - 6, y(v) + 3.5, `${dec(v, 0)}`, { size: 9, anchor: 'end' });
   }
@@ -768,9 +853,21 @@ export function renderFan(container, { fan, lines, unit, label, zero = false, wi
     fill: 'none', stroke: '#4fd1ff', 'stroke-width': 2.4, 'stroke-linejoin': 'round',
   }, svg);
 
+  const colW = fan.length > 1 ? plotW / (fan.length - 1) : plotW;
   fan.forEach((d, i) => {
     const when = parseLocal(`${d.date}T12:00`);
     if (when) text(svg, x(i), height - pad.b + 16, fmtShortDay(when), { size: 8.5, anchor: 'middle', mono: false });
+    /* A hit column per day, so the distribution can be read at the point rather
+       than estimated off the ribbon edges. */
+    const hit = svgEl('rect', {
+      x: x(i) - colW / 2, y: pad.t, width: colW, height: plotH, fill: 'transparent',
+    }, svg);
+    const u = unit ? ` ${unit}` : '';
+    hoverable(hit, tipTitle(when ? fmtShortDay(when) : d.date)
+      + tipRow(t('out.tip.p90'), `${dec(d.q[0.9], 1)}${u}`)
+      + tipRow(t('out.tip.median'), `${dec(d.q[0.5], 1)}${u}`)
+      + tipRow(t('out.tip.p10'), `${dec(d.q[0.1], 1)}${u}`)
+      + tipRow(t('out.tip.members'), d.n));
   });
 
   key(container, [
@@ -832,6 +929,9 @@ export function renderEventGrid(container, { days, events, label, onPick, select
         style: onPick ? 'cursor:pointer' : null,
       }, svg);
       if (onPick) cell.addEventListener('click', () => onPick(d.date));
+      hoverable(cell, tipTitle(`${t(`out.event.${e.id}`)} · ${d.when ? fmtShortDay(d.when) : d.date}`)
+        + tipRow(t(`out.event.${e.id}.short`), p === null ? '–' : `${Math.round(p * 100)}%`)
+        + (p === null ? '' : tipRow(t('out.tip.members'), t('out.tip.outOf', { k: Math.round(p * d.members), n: d.members }))));
       const shown = p === null ? '–' : `${Math.round(p * 100)}%`;
       text(svg, pad.l + i * colW + colW / 2, yy + rowH / 2 + 4, shown, {
         size: 11, anchor: 'middle', weight: 600,

@@ -132,28 +132,74 @@ function rampColor(stops, v) {
   return stops[stops.length - 1][1];
 }
 
-/* Temperature ramp: deep violet (arctic) → blue → teal at 0 → green → amber → red.
-   The zero-crossing is deliberately a hard visual break; it is the number that
-   decides whether the mountain is skiable or runnable. */
+/* ---------- data ramps ----------
+   Each of these encodes magnitude or polarity, so each is a proper scale rather
+   than a spectrum. The rule the earlier rainbows broke: a reader cannot rank
+   hues, only lightness — green is not "between" blue and yellow to anyone, so a
+   rainbow forces a legend lookup for every single cell.
+
+   Every step below was generated as an OKLCH ladder and checked for monotone
+   lightness, a visible gap between steps, a single hue per arm, and contrast
+   against the card. Editing one by eye will quietly break that. */
+
+/* Temperature is the one variable here with a natural midpoint, so it is the one
+   diverging scale: cold blue and warm red either side of a neutral at exactly
+   0 °C. That is not decoration — the freezing line decides rain against snow,
+   ice against grip, and it now falls where the colour goes quiet rather than
+   somewhere in the middle of a green. */
+/* The anchors are fixed rather than fitted to each day's data, so a colour means
+   the same thing on every peak and every page. They are spaced for the range a
+   Swedish mountain actually occupies: full chroma is reached by about ±16 °C,
+   not ±30, or an ordinary winter day would spend the whole palette on two
+   indistinguishable slates. */
 export const TEMP_STOPS = [
-  [-30, '#3b0764'], [-20, '#4c1d95'], [-12, '#1e40af'], [-6, '#0369a1'],
-  [-1, '#0e7490'], [0, '#155e75'], [1, '#15803d'], [8, '#4d7c0f'],
-  [15, '#a16207'], [22, '#c2410c'], [30, '#9f1239'],
+  [-25, '#8ae0ff'], [-16, '#7ac0fb'], [-9, '#6aa1d0'], [-4, '#5b83a6'], [-1.5, '#4b677e'],
+  [0, '#64707d'],
+  [1.5, '#7d5950'], [4, '#9f6c5f'], [9, '#c27e6e'], [16, '#e5927e'], [25, '#ffa58e'],
 ];
+/* Wind is pure magnitude: one hue, dim to bright. Danger is carried by the
+   numbers and the status colours beside them, never by a hue change here. */
 export const WIND_STOPS = [
-  [0, '#0b1220'], [3, '#134e4a'], [7, '#0e7490'], [12, '#1d4ed8'],
-  [17, '#6d28d9'], [22, '#a21caf'], [30, '#be123c'], [40, '#7f1d1d'],
+  [0, '#5a4a90'], [5, '#6e60a5'], [9, '#8476bb'], [14, '#998dd1'],
+  [19, '#b0a4e8'], [25, '#c7bcfe'], [35, '#dfd4ff'],
 ];
 export const PRECIP_STOPS = [
-  [0.05, '#0f172a'], [0.5, '#164e63'], [1.5, '#0369a1'],
-  [3, '#1d4ed8'], [6, '#6d28d9'], [10, '#a21caf'],
+  [0.05, '#056180'], [0.5, '#237a9d'], [1.5, '#3a94ba'],
+  [3, '#4faed8'], [6, '#65caf8'], [10, '#7be6ff'],
+];
+/* Two more single-hue ramps, for the aspect rose: snow loading and sunlight. */
+export const SNOW_STOPS = [
+  [0, '#11697a'], [20, '#228397'], [40, '#329eb4'],
+  [60, '#42bad3'], [80, '#52d6f3'], [100, '#63f4ff'],
+];
+export const SUN_STOPS = [
+  [0, '#785724'], [0.2, '#926b31'], [0.4, '#ad803e'],
+  [0.6, '#c9964c'], [0.8, '#e5ad5a'], [1, '#ffc469'],
 ];
 export const tempColor = (v) => rampColor(TEMP_STOPS, v);
 export const windColor = (v) => rampColor(WIND_STOPS, v);
+export const snowLoadColor = (v) => rampColor(SNOW_STOPS, v);
+export const sunColor = (v) => rampColor(SUN_STOPS, v);
 export function precipColor(v) {
   if (!Number.isFinite(v) || v < 0.05) return 'rgba(255,255,255,.035)';
   return rampColor(PRECIP_STOPS, v);
 }
+/**
+ * Ink that survives whatever the ramp put underneath it.
+ *
+ * A fixed white label is legible on the dark end of a sequential ramp and
+ * invisible on the bright end, which is exactly where the interesting values
+ * are. Relative luminance decides, so this stays correct if a ramp is retuned.
+ */
+export function inkOn(colour) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(colour).trim());
+  if (!m) return 'rgba(255,255,255,.92)';
+  const n = parseInt(m[1], 16);
+  const lin = (c) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+  const L = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+  return L > 0.42 ? 'rgba(6,8,11,.92)' : 'rgba(255,255,255,.94)';
+}
+
 export function rampCss(stops) {
   const lo = stops[0][0];
   const hi = stops[stops.length - 1][0];
