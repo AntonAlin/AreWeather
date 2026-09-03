@@ -275,9 +275,16 @@ never refetches anything — the assembled forecast carries i18n keys and biling
 sentences, so a language change is a re-render.
 
 The Swedish is written as Swedish, not translated English: the mountain vocabulary is the one used
-in the fjäll and by SMHI — *toppturer*, *nollgradig nivå*, *våttemperatur*, *byvind*, *flatljus*,
-*drivbildning*. Dates come from `Intl`, decimals use a comma, negative numbers use a real minus
-sign, and the compass reads N/NO/O/SO in Swedish rather than N/NE/E/SE.
+in the fjäll, by SMHI and by the national avalanche forecast — *toppturer*, *drivsnö*, *nollgradig
+nivå*, *våttemperatur*, *byvind*, *flatljus*, *kalfjället*, *kallrök*, *yrsnö*, *harscheisen*.
+Dates come from `Intl`, decimals use a comma, negative numbers use a real minus sign, and the
+compass reads N/NO/O/SO in Swedish rather than N/NE/E/SE.
+
+Safety terminology follows [lavinprognoser.se](https://www.lavinprognoser.se) rather than being
+translated from English, because a skier who reads the national bulletin and then reads this site
+should meet the same words for the same things. Wind slab is **drivsnö**, not a coinage; wind
+deposits it (*lägger upp*), it does not "pack" a slope. Ski crampons are **harscheisen**, which is
+what people actually call them — *stegjärn* is a boot crampon and a different piece of kit.
 
 Strings live in [`js/i18n.js`](js/i18n.js); markup carries `data-i18n` (text) or `data-i18n-html`
 (prose with inline markup). Activity names, rule labels and mountain descriptions are `{ en, sv }`

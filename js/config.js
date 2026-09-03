@@ -446,7 +446,7 @@ export const ACTIVITIES = [
     id: 'skimo', base: 74, window: 4, requires: null,
     name: { en: "Ski mountaineering", sv: "Toppturer" },
     short: { en: "Ski tour", sv: "Topptur" },
-    blurb: { en: "Earning the turns. Wind loading matters as much as the weather does.", sv: "Du gör dig förtjänt av svängarna. Vindtransporten betyder lika mycket som vädret." },
+    blurb: { en: "Earning the turns. Wind loading matters as much as the weather does.", sv: "Uppför för egen maskin. Vindtransporten betyder lika mycket som vädret." },
     season: { snowMin: 0.05, under: { en: "no snow cover", sv: "inget snötäcke" } },
     rules: [
       { kind: 'ramp', metric: 'coverDeficit', from: 0, slope: 90, cap: 28,
@@ -477,7 +477,7 @@ export const ACTIVITIES = [
         label: { en: "warm, wet snow", sv: "blöt vårsnö" },
         why: { en: "Isothermal mush, and a wet-loose problem in steep terrain.", sv: "Genomvåt snö, och risk för våta laviner i brant terräng." } },
       { kind: 'ramp', metric: 'drift', from: 45, slope: 0.35, cap: 18,
-        label: { en: "wind slab building", sv: "drivbildning" },
+        label: { en: "wind slab building", sv: "drivsnö" },
         why: { en: "Meteorological wind loading — see the avalanche warning.", sv: "Meteorologisk vindtransport — se lavinvarningen." } },
       { kind: 'flag', flag: 'summitInCloud', amount: 15,
         label: { en: "flat light, no visibility", sv: "flatljus, ingen sikt" },
@@ -859,7 +859,7 @@ export const RESOURCES = {
       title: { en: 'Avalanche and safety', sv: 'Lavin och säkerhet' },
       intro: {
         en: 'Read the bulletin before you go, every time. This app models the weather that builds a slab; it does not assess a snowpack.',
-        sv: 'Läs lavinprognosen innan du åker, varje gång. Den här appen modellerar vädret som bygger flaksnö; den bedömer inte snötäcket.',
+        sv: 'Läs lavinprognosen innan du åker, varje gång. Den här appen modellerar vädret som bygger drivsnö; den bedömer inte snötäcket.',
       },
       items: [
         {

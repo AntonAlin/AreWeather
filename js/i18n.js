@@ -2,7 +2,7 @@
  *
  * Swedish here is written as Swedish, not as translated English. The mountain
  * vocabulary is the one used in the fjäll and by SMHI — toppturer, nollgradig
- * nivå, våttemperatur, byvind, flatljus, drivbildning — because a forecast that
+ * nivå, våttemperatur, byvind, flatljus, drivsnö — because a forecast that
  * calls a gust "vindpust" tells a Swedish skier immediately that nobody who
  * skis wrote it.
  *
@@ -161,7 +161,7 @@ export const STRINGS = {
   'summary.allRain': { en: 'Everything is falling as rain.', sv: 'All nederbörd faller som regn.' },
   'summary.newSnow': { en: '<b>{cm} cm</b> of new snow in the last 24 h.', sv: '<b>{cm} cm</b> nysnö det senaste dygnet.' },
   'summary.inCloud': { en: 'The summit is <b>in cloud</b>.', sv: 'Toppen ligger <b>i moln</b>.' },
-  'summary.drift': { en: 'Wind is actively <b>loading lee slopes</b> (index {n}).', sv: 'Vinden <b>packar snö på läsidorna</b> just nu (index {n}).' },
+  'summary.drift': { en: 'Wind is actively <b>loading lee slopes</b> (index {n}).', sv: 'Vinden <b>lägger upp drivsnö på läsidorna</b> just nu (index {n}).' },
 
   /* ---- matrix, profile, hourly ---- */
   'matrix.title': { en: 'Elevation × time', sv: 'Höjd × tid' },
@@ -202,7 +202,7 @@ export const STRINGS = {
   'legend.snow': { en: 'snow', sv: 'snö' },
 
   'profile.title': { en: 'Vertical profile', sv: 'Vertikalprofil' },
-  'profile.sub': { en: 'Model sounding interpolated to the mountain, anchored to the surface ensemble.', sv: 'Modellprofil interpolerad till berget, förankrad i markensemblen.' },
+  'profile.sub': { en: 'Model sounding interpolated to the mountain, anchored to the surface ensemble.', sv: 'Modellprofil interpolerad till berget, förankrad i ensemblen vid marknivå.' },
   'profile.subFallback': { en: 'No pressure-level data for this hour — showing the lapse-rate fallback.', sv: 'Inga trycknivådata för den här timmen — visar reservberäkning med konstant temperaturgradient.' },
   'profile.cloudBase': { en: 'CLOUD BASE {z} m', sv: 'MOLNBAS {z} m' },
   'profile.snowLine': { en: 'SNOW LINE {z} m', sv: 'SNÖGRÄNS {z} m' },
@@ -267,7 +267,7 @@ export const STRINGS = {
   'intel.spread.wide': { en: 'Models disagree — treat this hour as uncertain', sv: 'Modellerna är oeniga — behandla timmen som osäker' },
   'intel.cape': { en: 'CAPE', sv: 'CAPE' },
   'intel.cape.high': { en: 'Thunderstorms likely — get off the ridge', sv: 'Åska trolig — lämna ryggen' },
-  'intel.cape.some': { en: 'Some convective potential', sv: 'Viss konvektiv potential' },
+  'intel.cape.some': { en: 'Building instability — watch the sky', sv: 'Instabiliteten växer — håll koll på himlen' },
   'intel.daylight': { en: 'Daylight', sv: 'Dagsljus' },
   'intel.daylight.sub': { en: '{hours} h of light', sv: '{hours} tim ljust' },
   'intel.daylight.uv': { en: '{hours} h of light · UV max {uv}', sv: '{hours} tim ljust · UV max {uv}' },
@@ -516,7 +516,7 @@ export const STRINGS = {
   },
   'method.step4': {
     en: '<b>Phase from wet-bulb temperature</b>, not air temperature — the physically correct way to place a snow line, then a temperature-dependent snow ratio converts millimetres to centimetres.',
-    sv: '<b>Nederbördsfasen bestäms av våttemperaturen</b>, inte lufttemperaturen — det fysikaliskt korrekta sättet att placera en snögräns. Ett temperaturberoende snöförhållande räknar sedan om millimeter till centimeter.',
+    sv: '<b>Nederbördsfasen bestäms av våttemperaturen</b>, inte lufttemperaturen — det fysikaliskt korrekta sättet att placera en snögräns. En temperaturberoende snödensitet räknar sedan om millimeter vatten till centimeter snö.',
   },
   'method.step5': {
     en: '<b>Machine learning, trained in your browser.</b> 45 days of archived forecasts from every model are scored against ERA5-Land reanalysis. A ridge regression learns the residual temperature and wind bias at this point; a logistic model calibrates precipitation probability; a softmax over measured error assigns each model its weight. Hold-out validation is reported honestly in the learning log — including when the correction does not help.',
@@ -1330,13 +1330,13 @@ export const STRINGS = {
 
   /* ---- aspect ---- */
   'aspect.title': { en: 'Which side of the mountain', sv: 'Vilken sida av berget' },
-  'aspect.sub': { en: 'Wind strips one side and loads the other, and the sun only reaches some of it. This is the part a local knows.', sv: 'Vinden blåser ren ena sidan och packar den andra, och solen når bara delar av berget. Det är den kunskapen en ortsbo har.' },
+  'aspect.sub': { en: 'Wind strips one side and loads the other, and the sun only reaches some of it. This is the part a local knows.', sv: 'Vinden blåser av den ena sidan och lägger upp drivsnö på den andra, och solen når bara delar av berget. Det är sådant en lokalkännare vet.' },
   'aspect.lensGroup': { en: 'What to show', sv: 'Vad som visas' },
   'aspect.lens.wind': { en: 'Wind', sv: 'Vind' },
-  'aspect.lens.loading': { en: 'Loading', sv: 'Drivbildning' },
+  'aspect.lens.loading': { en: 'Loading', sv: 'Drivsnö' },
   'aspect.lens.sun': { en: 'Sun', sv: 'Sol' },
   'aspect.aria.wind': { en: 'Wind speed by slope aspect', sv: 'Vindhastighet per väderstreck' },
-  'aspect.aria.loading': { en: 'Wind loading by slope aspect', sv: 'Drivbildning per väderstreck' },
+  'aspect.aria.loading': { en: 'Wind loading by slope aspect', sv: 'Drivsnö per väderstreck' },
   'aspect.aria.sun': { en: 'Sunlight by slope aspect', sv: 'Solljus per väderstreck' },
   'aspect.sheltered': { en: 'Most sheltered', sv: 'Mest i lä' },
   'aspect.exposed': { en: 'Most exposed', sv: 'Mest utsatt' },
@@ -1347,11 +1347,11 @@ export const STRINGS = {
   'aspect.sunDown': { en: 'below the horizon', sv: 'under horisonten' },
   'aspect.verdictCalm': {
     en: 'Nothing is being loaded at this hour. The <b>{sheltered}</b> slopes are the calm ones if you want shelter.',
-    sv: 'Ingenting packas den här timmen. Sluttningar mot <b>{sheltered}</b> ligger i lä om du vill ha skydd.',
+    sv: 'Ingen drivsnö byggs upp den här timmen. Sluttningar mot <b>{sheltered}</b> ligger i lä om du vill ha skydd.',
   },
   'aspect.verdictLoaded': {
     en: 'Wind is stripping the windward side and depositing it on <b>{loaded}</b>. Those are the slopes building slab; <b>{sheltered}</b> are the calm ones. This is meteorology, not an avalanche forecast — check the bulletin.',
-    sv: 'Vinden blåser ren lovartsidan och lägger snön på <b>{loaded}</b>. Där byggs flaksnö; <b>{sheltered}</b> ligger lugnast. Det här är meteorologi, inte en lavinprognos — läs prognosen.',
+    sv: 'Vinden blåser av lovartsidan och lägger snön på <b>{loaded}</b>. Det är där drivsnön byggs upp; <b>{sheltered}</b> ligger lugnast. Det här är meteorologi, inte en lavinprognos — läs prognosen.',
   },
   'aspect.caveat': {
     en: 'This is compass geometry, not terrain. It knows the wind direction and where the sun is; it does not know your gully, the cornice above it, or the trees that shelter the lower slope. Use it to choose where to look, then look.',
@@ -1415,9 +1415,9 @@ export const STRINGS = {
 
   'pack.nothingSpecial': { en: 'Nothing unusual — normal mountain kit for the season covers this window.', sv: 'Inget ovanligt — vanlig fjällutrustning för säsongen räcker för den här perioden.' },
   'pack.faceProtection': { en: 'Face protection', sv: 'Ansiktsskydd' },
-  'pack.faceProtection.why': { en: 'it drops below −15 °C felt, where exposed skin has minutes rather than hours', sv: 'det går under −15 °C känt, då bar hud har minuter på sig snarare än timmar' },
+  'pack.faceProtection.why': { en: 'it drops below −15 °C felt, where exposed skin has minutes rather than hours', sv: 'det känns som −15 °C eller kallare, och då har bar hud minuter på sig, inte timmar' },
   'pack.insulation': { en: 'A real insulating layer', sv: 'Ett riktigt isolerande lager' },
-  'pack.insulation.why': { en: 'below −5 °C felt at the summit, a softshell stops being enough when you stop moving', sv: 'under −5 °C känt på toppen räcker inte ett softshell när du stannar' },
+  'pack.insulation.why': { en: 'below −5 °C felt at the summit, a softshell stops being enough when you stop moving', sv: 'det känns som −5 °C eller kallare på toppen, och då räcker inte ett softshell när du stannar' },
   'pack.windShell': { en: 'A windproof shell', sv: 'Vindtätt skalplagg' },
   'pack.windShell.why': { en: 'gusts reach 15 m/s or more, which strips warmth faster than cold alone', sv: 'byarna når 15 m/s eller mer, vilket drar ur värmen fortare än kylan ensam' },
   'pack.rainShell': { en: 'Waterproofs, not water-resistant', sv: 'Vattentätt, inte vattenavvisande' },
@@ -1426,18 +1426,18 @@ export const STRINGS = {
   'pack.spareSocks.why': { en: 'two or more wet days, and nothing dries in a hut overnight', sv: 'två eller fler blöta dygn, och ingenting torkar i en stuga över natten' },
   'pack.goggles': { en: 'Goggles, not sunglasses', sv: 'Goggles, inte solglasögon' },
   'pack.goggles.why': { en: 'wind plus falling snow — sunglasses are useless in spindrift', sv: 'vind och snöfall samtidigt — solglasögon är värdelösa i yrsnö' },
-  'pack.avalancheKit': { en: 'Transceiver, shovel, probe', sv: 'Sändare, spade, sond' },
-  'pack.avalancheKit.why': { en: 'significant new snow on an existing cover is exactly when slab builds — and read the bulletin', sv: 'mycket nysnö på befintligt snötäcke är precis när flaksnö byggs — och läs lavinprognosen' },
-  'pack.skiCrampons': { en: 'Ski crampons', sv: 'Stighudsjärn' },
-  'pack.skiCrampons.why': { en: 'it freezes and thaws in your window, which is how a skin track turns to ice overnight', sv: 'det växlar mellan frost och töväder, vilket är hur ett stighudsspår blir is över natten' },
+  'pack.avalancheKit': { en: 'Transceiver, shovel, probe', sv: 'Transceiver, spade, sond' },
+  'pack.avalancheKit.why': { en: 'significant new snow on an existing cover is exactly when slab builds — and read the bulletin', sv: 'mycket nysnö på befintligt snötäcke är precis när drivsnö byggs — och läs lavinprognosen' },
+  'pack.skiCrampons': { en: 'Ski crampons', sv: 'Harscheisen' },
+  'pack.skiCrampons.why': { en: 'it freezes and thaws in your window, which is how a skin track turns to ice overnight', sv: 'det växlar mellan frost och töväder, och det är så uppspåret blir en isränna över natten' },
   'pack.headlamp': { en: 'A headlamp', sv: 'Pannlampa' },
   'pack.headlamp.why': { en: 'eight hours of daylight or less, and the light goes quickly at this latitude', sv: 'åtta timmars dagsljus eller mindre, och ljuset försvinner fort på den här breddgraden' },
   'pack.sunglasses': { en: 'Sunglasses and sunscreen', sv: 'Solglasögon och solskydd' },
-  'pack.sunglasses.why': { en: 'long days over snow — the reflected dose is what burns people here', sv: 'långa dagar över snö — det är den reflekterade strålningen som bränner folk här' },
+  'pack.sunglasses.why': { en: 'long days over snow — it is the glare off the snow that burns people here', sv: 'långa dagar över snö — det är den reflekterade strålningen som bränner folk här' },
   'pack.traction': { en: 'Traction for bare ice', sv: 'Broddar' },
   'pack.traction.why': { en: 'freeze-thaw without snow cover leaves glazed rock and iced-over trail', sv: 'växlande frost och töväder utan snötäcke ger isiga hällar och isbelagda leder' },
   'pack.thunder': { en: 'A plan for thunder', sv: 'En plan för åska' },
-  'pack.thunder.why': { en: 'convective potential in your window — know where you would descend to', sv: 'konvektiv potential under din period — vet vart du skulle ta dig ner' },
+  'pack.thunder.why': { en: 'the air is unstable enough for storms — know where you would drop off the tops', sv: 'luften är instabil nog för åska — ha en väg ner från kalfjället klar' },
 
   /* ---- resources page ---- */
   'page.links.title': { en: 'Everything else — ÅreWeather', sv: 'Allt det andra — ÅreWeather' },
@@ -1505,7 +1505,7 @@ export const STRINGS = {
 
   /* ---------- chart tooltips ---------- */
   'aspect.tip.wind': { en: 'Wind on this side', sv: 'Vind på den här sidan' },
-  'aspect.tip.loading': { en: 'Wind loading', sv: 'Drivbildning' },
+  'aspect.tip.loading': { en: 'Wind loading', sv: 'Drivsnö' },
   'aspect.tip.sun': { en: 'Sun on the slope', sv: 'Sol på sluttningen' },
   'climate.tip.week': { en: 'Week {n}, normally', sv: 'Vecka {n}, normalt' },
   'climate.tip.day': { en: 'By day', sv: 'Dagtid' },
