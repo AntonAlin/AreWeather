@@ -13,7 +13,8 @@ import { distanceKm, parseStationSet, nearestStations, collectStation, compareWi
 import { wetBulb, dewPoint, windChill, snowRatio, buildSounding, temperatureAt, solarPosition, aspectAnalysis, aspectAdvice, angleBetween, ASPECTS } from '../js/physics.js';
 import { summarise, percentileOf, contextFor, unusualness, weekly, dayOfYear } from '../js/climate.js';
 import { STRINGS, LANGS } from '../js/i18n.js';
-import { WARMING, CLIMATE_MODELS } from '../js/config.js';
+import { WARMING, CLIMATE_MODELS, OUTLOOK } from '../js/config.js';
+import { memberDays, daily, probabilityOf, trajectories, fan, agreement, headline, memberSeries } from '../js/probability.js';
 import { extract, winters, ensemble, overPeriod, trend, staircase, verdict, reliabilityLine, winterYear, depthFromWater, reliableWaterEquivalent, pack, unpack, STORED_METRICS } from '../js/projection.js';
 import { round, mean } from '../js/util.js';
 import fs from 'node:fs';
@@ -24,6 +25,7 @@ const ok = (cond, msg, detail = '') => {
   else { failures++; console.log(`  ✗ ${msg} ${detail}`); }
 };
 const near = (a, b, tol) => Math.abs(a - b) <= tol;
+const pct = (p) => (Number.isFinite(p) ? `${Math.round(p * 100)}%` : '-');
 
 /* ---------- synthetic data ---------- */
 const STD = { 1000: 110, 975: 320, 950: 540, 925: 760, 900: 990, 850: 1460, 800: 1950, 700: 3010, 600: 4200, 500: 5570 };
@@ -692,6 +694,130 @@ console.log('\nClimate projections');
   ok(CLIMATE_MODELS.length === 7 && new Set(CLIMATE_MODELS.map((m) => m.key)).size === 7, 'seven distinct climate models are configured');
   ok(WARMING.bands.every((z, i) => i === 0 || z > WARMING.bands[i - 1]), 'the bands are in order');
   ok(WARMING.periods.every((p) => p.to > p.from), 'and every period runs forwards');
+}
+
+/* ---------- 15. probabilities ---------- */
+console.log('\nEnsemble probabilities');
+{
+  /* A synthetic ensemble: `spec` gives each member a fixed daily character, so
+     the probability of any event is known exactly before it is computed. */
+  function ensembleOf(spec, { days = 4, elevation = 1420 } = {}) {
+    const hourly = { time: [] };
+    for (let d = 0; d < days; d++) {
+      for (let h = 0; h < 24; h++) hourly.time.push(`2026-02-${pad(10 + d)}T${pad(h)}:00`);
+    }
+    spec.forEach((member, m) => {
+      const id = `member${pad(m + 1)}`;
+      const T = [], P = [], W = [], C = [];
+      for (let d = 0; d < days; d++) {
+        const day = member[Math.min(d, member.length - 1)];
+        for (let h = 0; h < 24; h++) {
+          T.push(day.temp);
+          P.push(day.mmPerHour ?? 0);
+          W.push(h === 12 ? (day.gust ?? day.wind ?? 0) : (day.wind ?? 0));
+          C.push(day.cloud ?? 50);
+        }
+      }
+      hourly[`temperature_2m_${id}`] = T;
+      hourly[`precipitation_${id}`] = P;
+      hourly[`wind_speed_10m_${id}`] = W;
+      if (member.every((x) => x.cloud !== null)) hourly[`cloud_cover_${id}`] = C;
+    });
+    return { elevation, hourly };
+  }
+
+  const cold = { temp: -8, mmPerHour: 0.5, wind: 4, cloud: 90 };      // 12 mm/day as snow
+  const calm = { temp: -6, mmPerHour: 0, wind: 3, cloud: 10 };        // bluebird
+  const gale = { temp: -3, mmPerHour: 0.4, wind: 22, cloud: 95 };     // storm
+  const wet = { temp: 4, mmPerHour: 0.3, wind: 6, cloud: 95 };        // rain
+  const deep = { temp: -25, mmPerHour: 0, wind: 2, cloud: 20 };       // hard freeze
+
+  const spec = [
+    ...Array(4).fill([cold]), ...Array(3).fill([calm]),
+    ...Array(2).fill([gale]), [wet],
+  ];
+  const rows = memberDays(ensembleOf(spec), { elevation: 1420, anchor: 1420 });
+  ok(rows.length === 10 * 4, 'one record per member per day', `${rows.length}`);
+  ok(new Set(rows.map((r) => r.member)).size === 10, 'and one member per member');
+
+  const days = daily(rows);
+  ok(days.length === 4, 'four days in, four days out');
+  const d0 = days[0];
+  ok(d0.members === 10, 'every member reaches every day');
+  /* Six, not four: the two gale members drop 9.6 mm at -3 °C, which at a ratio
+     of 11 is 10.6 cm — a storm day is very often a powder day too, and counting
+     members is what makes that visible instead of hiding it in two averages. */
+  ok(near(d0.events.powder, 0.6, 1e-9), 'the powder share is counted, not estimated', `${d0.events.powder}`);
+  ok(near(d0.events.powder + d0.events.bluebird + d0.events.rain, 1, 1e-9), 'and storms are counted in both places they belong');
+  ok(near(d0.events.bluebird, 0.3, 1e-9), 'and so is the bluebird share', `${d0.events.bluebird}`);
+  ok(near(d0.events.storm, 0.2, 1e-9), 'and the storm share', `${d0.events.storm}`);
+  ok(near(d0.events.rain, 0.1, 1e-9), 'and the rain share', `${d0.events.rain}`);
+  ok(d0.events.hardFreeze === 0, 'an event no member delivers is zero, not missing');
+  const arctic = daily(memberDays(ensembleOf([[deep], [deep], [calm], [calm]]), { elevation: 1420, anchor: 1420 }))[0];
+  ok(near(arctic.events.hardFreeze, 0.5, 1e-9), 'and one that half of them do is a half', `${arctic.events.hardFreeze}`);
+  ok(near(probabilityOf(
+    memberDays(ensembleOf([[deep], [deep], [calm], [calm]]), { elevation: 1420, anchor: 1420 }).filter((r) => r.date === arctic.date),
+    OUTLOOK.events.find((e) => e.id === 'hardFreeze'),
+  ), 0.5, 1e-9), 'counted the same way when asked for one event alone');
+  ok(near(d0.wetFrac, 0.7, 1e-9), 'the wet fraction counts members with measurable precipitation', `${d0.wetFrac}`);
+  ok(d0.pop === d0.wetFrac && d0.popCalibrated === false, 'and stands uncalibrated when nothing calibrates it');
+
+  /* the property the whole module exists for: joint conditions */
+  const jointSpec = [
+    ...Array(5).fill([{ temp: -8, mmPerHour: 0.5, wind: 4, cloud: 90 }]),     // snow, calm
+    ...Array(5).fill([{ temp: -8, mmPerHour: 0.5, wind: 25, cloud: 90 }]),    // snow, gale
+  ];
+  const joint = daily(memberDays(ensembleOf(jointSpec), { elevation: 1420, anchor: 1420 }))[0];
+  ok(near(joint.events.powder, 1, 1e-9), 'every member can deliver the snow');
+  ok(near(joint.events.storm, 0.5, 1e-9), 'while half of them blow it away');
+  const bothInSame = memberDays(ensembleOf(jointSpec), { elevation: 1420, anchor: 1420 })
+    .filter((r) => r.date === joint.date && r.snow >= 10 && r.windMax >= 20).length;
+  ok(bothInSame === 5, 'and the pairing survives per member — which marginals could not tell you', `${bothInSame}`);
+
+  /* elevation moves the snow line, and nothing else has to change */
+  /* Freezing at the summit, well above it at the valley once the lapse rate
+     has been applied — the same precipitation, two different surfaces. */
+  const mild = [...Array(6).fill([{ temp: 0, mmPerHour: 0.6, wind: 5, cloud: 90 }])];
+  const atSummit = daily(memberDays(ensembleOf(mild), { elevation: 1420, anchor: 1420 }))[0];
+  const atValley = daily(memberDays(ensembleOf(mild), { elevation: 400, anchor: 1420 }))[0];
+  ok(atSummit.events.rain === 0 && atValley.events.rain === 1, 'the valley takes rain where the summit takes snow',
+    `${pct(atSummit.events.rain)} vs ${pct(atValley.events.rain)}`);
+  ok(atSummit.events.powder > atValley.events.powder, 'and only the summit banks it as new snow');
+  ok(atValley.tmax.p50 > atSummit.tmax.p50, 'and the valley is warmer for it');
+
+  /* an unavailable variable is unanswerable, not zero */
+  const noCloud = ensembleOf([[{ temp: -6, mmPerHour: 0, wind: 3, cloud: null }]]);
+  const blind = daily(memberDays(noCloud, { elevation: 1420, anchor: 1420 }))[0];
+  ok(blind.events.bluebird === null, 'an event needing a missing variable says so rather than saying never');
+  ok(blind.events.storm === 0, 'while the events that can be answered still are');
+
+  /* calibration is applied when offered and flagged when it is */
+  const calibrated = daily(rows, { calibrate: () => 0.42 })[0];
+  ok(near(calibrated.pop, 0.42, 1e-9) && calibrated.popCalibrated, 'a calibrated probability replaces the raw fraction');
+  const declined = daily(rows, { calibrate: () => null })[0];
+  ok(declined.pop === declined.wetFrac && !declined.popCalibrated, 'and a declined one leaves the count alone, marked raw');
+
+  /* shapes for the chart come from the same rows as the counts */
+  const traj = trajectories(rows, 'tmax');
+  ok(traj.lines.length === 10 && traj.dates.length === 4, 'a trajectory per member across every day');
+  ok(traj.lines.every((l) => l.values.length === traj.dates.length), 'each one as long as the period');
+  const band = fan(rows, 'tmax');
+  ok(band.length === 4 && band.every((b) => b.q[0.1] <= b.q[0.5] && b.q[0.5] <= b.q[0.9]), 'the fan quantiles are ordered');
+
+  ok(memberSeries(ensembleOf(spec).hourly, 'temperature_2m').length === 10, 'members are found by name');
+  ok(memberSeries(null, 'temperature_2m').length === 0, 'and nothing is found in nothing');
+  ok(memberDays(null, { elevation: 1000 }).length === 0, 'no ensemble, no member days');
+  ok(daily([]).length === 0, 'and no rows, no days');
+
+  ok(agreement(1) === 'tight' && agreement(20) === 'loose' && agreement(5) === 'fair', 'agreement is graded from the spread');
+  ok(agreement(NaN) === null, 'and withheld without a spread');
+
+  const top = headline(days);
+  ok(top && top.event.id === 'powder', 'the headline picks the strongest event in the period', top?.event?.id);
+  ok(headline(days, { floor: 0.99 }) === null, 'and says nothing when nothing clears the floor');
+
+  ok(OUTLOOK.events.every((e) => typeof e.test === 'function' && e.id && e.kind), 'every configured event is well formed');
+  ok(OUTLOOK.bands.includes(OUTLOOK.defaultBand), 'the default band is one of the bands');
 }
 
 console.log(`\n${failures ? `${failures} FAILED` : 'all checks passed'}\n`);

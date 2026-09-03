@@ -66,6 +66,16 @@ day the summit is *warmer* than the village. This app forecasts every 100 m band
 - **A page for everything a forecast cannot tell you** — the avalanche bulletin, live webcams, lift
   opening hours, road conditions, hut seasons, the reindeer herding areas and the local rules that
   apply in them. Nineteen links, each with a sentence on why it is there and when it matters.
+- **The whole week as probabilities, not promises.** Every ensemble member is carried through to its
+  own daily totals, so the chance of a powder day is the share of members whose *own* day delivers
+  one — which means the wind and the snow come from the same run. That is a claim no amount of
+  arithmetic on p10/p50/p90 can make: a storm day is very often a powder day too, and only member
+  counting can tell you whether the run that gives you 20 cm is the one that then strips it. Five
+  kinds of day are counted across seven days and four elevations, with every member drawn so you can
+  see whether the spread is one uncertain forecast or two different weathers. Exactly one figure on
+  that page is calibrated — the probability of precipitation, from the logistic model, and only when
+  it beat the raw ensemble on its hold-out block — and it is labelled differently from the counted
+  ones, because a calibrated number and a counted one are not the same kind of claim.
 - **A page for the question a resort would rather not answer** — how long does winter have left?
   Seven CMIP6 HighResMIP climate models, daily from 1950 to 2050, downscaled to each elevation band:
   season length, days below freezing, midwinter thaws, and the nights still cold enough to make
@@ -140,6 +150,10 @@ way round and the percentiles land where they should, checks the solar position 
 midwinter and midsummer noon elevations at this latitude, checks the aspect analysis calls shelter on
 the lee side and loading with it, and audits both languages.
 
+For the probabilities it builds an ensemble whose every member has a known character, so the answer
+is known before it is computed — including the case the module exists for: that a member delivering
+both the snow and the gale is counted in both places, which marginal quantiles cannot express.
+
 For the climate projections it synthesises a century with a known warming rate injected, then checks
 that the pipeline recovers that rate, that the summit keeps its winter longer than the valley, that
 the ensemble median always sits inside the model spread, and that a century with no trend in it
@@ -193,6 +207,7 @@ thresholds, snow-drift threshold — are all together in the `PHYS` block of the
 index.html          single-peak forecast
 compare.html        all ten peaks, scored side by side for the week
 trip.html           date-range planner: what to do on each day of a visit
+outlook.html        the coming week as probabilities, counted across the ensemble
 warming.html        Åre's exposure to a warming climate, by elevation
 links.html          everything a forecast cannot tell you
 methods.html        every calculation, source and licence
@@ -201,6 +216,7 @@ js/config.js        peaks, models, endpoints, activities, resources, tunables
 js/api.js           Open-Meteo fetching, progressive fallback, caching
 js/physics.js       thermodynamics, soundings, downscaling, sun and aspect
 js/climate.js       thirty-year day-of-year climatology and percentiles
+js/probability.js   member-wise event probabilities from the ensemble
 js/projection.js    CMIP6 winter metrics, the degree-day snowpack, model ensembling
 js/ml.js            ridge / logistic regression, model skill weighting, validation
 js/forecast.js      assembles everything into one view model, activity scoring
@@ -211,6 +227,7 @@ js/observations.js  SMHI station selection, comparison and the verification log
 js/compare.js       state and wiring for the comparison view
 js/trip.js          the trip planner and its packing rules
 js/links.js         renders the resources page from configuration
+js/outlook.js       state and wiring for the probability view
 js/warming.js       state and wiring for the climate-projection view
 js/methods.js       renders the method page from the live configuration
 js/i18n.js          every string, in both languages

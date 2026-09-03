@@ -182,6 +182,56 @@ export const ENDPOINTS = {
 };
 
 /* ---------------------------------------------------------------------------
+   The outlook.
+
+   A probabilistic forecast is not a spread around a headline number — it is a
+   set of possible days, one per ensemble member, counted. Every event below is
+   a predicate applied to one member's own day, so "a powder day with the lifts
+   turning" means the same member delivered both, which no amount of arithmetic
+   on p10/p50/p90 can tell you.
+
+   Thresholds are here rather than in the code because each one is a judgement
+   a reader is entitled to disagree with, and the method page prints them.
+   --------------------------------------------------------------------------- */
+export const OUTLOOK = {
+  /** elevations the members are lapsed to, and the one shown first */
+  bands: [400, 800, 1100, 1420],
+  defaultBand: 1100,
+  /** the hours counted as "the day" for daytime-only events */
+  day: { from: 9, to: 16 },
+  /** measurable precipitation, mm in an hour — the usual definition of "wet" */
+  wetHour: 0.1,
+  events: [
+    {
+      id: 'powder', kind: 'good',
+      /** new snow over the day, at this elevation */
+      test: (d) => d.snow >= 10,
+    },
+    {
+      id: 'bluebird', kind: 'good',
+      /** dry, calm and actually clear, in daylight — needs cloud cover to mean anything */
+      test: (d) => d.precip < 0.5 && d.windMax < 9 && Number.isFinite(d.cloudDay) && d.cloudDay < 40,
+      needs: 'cloud',
+    },
+    {
+      id: 'storm', kind: 'bad',
+      test: (d) => d.windMax >= 20 || (d.windMax >= 15 && d.precip >= 8),
+    },
+    {
+      id: 'rain', kind: 'bad',
+      /** rain, not snow, and enough of it to wreck a surface */
+      test: (d) => d.rain >= 1,
+    },
+    {
+      id: 'hardFreeze', kind: 'cold',
+      test: (d) => d.tmin <= -20,
+    },
+  ],
+  /** how wide the middle of the distribution has to be before it is called uncertain (°C) */
+  agreement: { tight: 3, loose: 7 },
+};
+
+/* ---------------------------------------------------------------------------
    Climate projections.
 
    Seven CMIP6 HighResMIP models, daily, 1950-2050, statistically downscaled to

@@ -1081,8 +1081,8 @@ export const STRINGS = {
     sv: 'Bergen',
   },
   'm.limits.1': {
-    en: '11 · What this is not',
-    sv: '11 · Vad det här inte är',
+    en: '12 · What this is not',
+    sv: '12 · Vad det här inte är',
   },
   'm.limits.2': {
     en: '<b>This is not an avalanche forecast.</b> The wind-loading index and new-snow figures are meteorological indices. They know nothing about aspect, slope angle, terrain traps, or the buried weak layer that decides whether a slope releases. For avalanche danger in the Swedish fjäll use <a href="https://www.lavinprognoser.se" target="_blank" rel="noopener">lavinprognoser.se</a>; for official warnings, <a href="https://www.smhi.se" target="_blank" rel="noopener">SMHI</a>.',
@@ -1113,8 +1113,8 @@ export const STRINGS = {
     sv: 'Källkoden är offentlig: varje formel på den här sidan finns i <code>js/physics.js</code>, <code>js/ml.js</code> och <code>js/forecast.js</code>, och <code>tools/selftest.mjs</code> kontrollerar dem mot kända fall utan nätverk.',
   },
   'm.contact.1': {
-    en: '12 · Contact',
-    sv: '12 · Kontakt',
+    en: '13 · Contact',
+    sv: '13 · Kontakt',
   },
   'm.contact.2': {
     en: 'Wrong forecast, broken chart, a peak that should be on the list, or an exposure factor you think is nonsense — all of it is welcome. There are two ways to reach me.',
@@ -1458,7 +1458,7 @@ export const STRINGS = {
   },
 
   /* ---------- method page: climate projections ---------- */
-  'm.warm.1': { en: '10 · Climate projections', sv: '10 · Klimatprojektioner' },
+  'm.warm.1': { en: '11 · Climate projections', sv: '11 · Klimatprojektioner' },
   'm.warm.2': {
     en: 'Everything behind the <a href="warming.html">winter ahead</a> page: which models, which scenario, and every threshold a number on that page is counted against.',
     sv: 'Allt bakom sidan <a href="warming.html">vintern framåt</a>: vilka modeller, vilket scenario och varje gränsvärde som en siffra på den sidan räknas mot.',
@@ -1502,6 +1502,206 @@ export const STRINGS = {
   'm.warm.th.density': { en: 'Settled snowpack density used to turn water equivalent into depth', sv: 'Sättningsdensitet som omvandlar vattenekvivalent till djup' },
   'm.warm.th.year': { en: 'A winter year starts in this month, so one winter is never split in two', sv: 'Ett vinterår börjar den här månaden, så att en vinter aldrig delas i två' },
   'm.warm.th.lapse': { en: 'Lapse rate used to move the grid cell to each elevation, °C per 100 m', sv: 'Temperaturgradient som flyttar rutan till varje höjd, °C per 100 m' },
+
+  /* ---------- the outlook page ---------- */
+  'page.outlook.title': { en: 'Chances, not promises — ÅreWeather', sv: 'Chanser, inte löften — ÅreWeather' },
+  'page.outlook.description': {
+    en: 'A probabilistic week for the Åre fjäll: the chance of a powder day, a bluebird day, a storm or rain on snow, counted across every ensemble member and calibrated against measured skill.',
+    sv: 'En sannolikhetsbaserad vecka för Årefjällen: chansen för en pudderdag, en klarblå dag, storm eller regn på snö, räknat över varje ensemblemedlem och kalibrerat mot uppmätt träffsäkerhet.',
+  },
+  'brand.outlook': { en: 'the odds', sv: 'oddsen' },
+  'nav.outlook': { en: 'The odds', sv: 'Oddsen' },
+
+  'out.h1': { en: 'Chances, not promises', sv: 'Chanser, inte löften' },
+  'out.lede': {
+    en: 'A forecast that says “12 cm of snow” is one guess dressed as a fact. This page runs the whole ensemble instead — every member is a complete, self-consistent week — and counts how many of them deliver the day you are hoping for. Nine out of thirty is a real answer. It is also a different one from “probably not”.',
+    sv: 'En prognos som säger ”12 cm snö” är en gissning utklädd till faktum. Den här sidan använder i stället hela ensemblen — varje medlem är en komplett och inbördes konsekvent vecka — och räknar hur många av dem som ger dagen du hoppas på. Nio av trettio är ett riktigt svar. Det är också ett annat svar än ”förmodligen inte”.',
+  },
+  'out.pill.members': { en: '{n} ensemble members', sv: '{n} ensemblemedlemmar' },
+  'out.pill.noMembers': { en: 'No ensemble yet', sv: 'Ingen ensemble ännu' },
+  'out.pill.system': { en: 'System: {system}', sv: 'System: {system}' },
+  'out.pill.mlOn': { en: 'Rain probability calibrated', sv: 'Nederbördsrisk kalibrerad' },
+  'out.pill.mlOff': { en: 'Calibration off — raw member counts', sv: 'Kalibrering av — råa medlemsandelar' },
+  'out.error': { en: 'The ensemble could not be loaded: {reason}', sv: 'Ensemblen kunde inte hämtas: {reason}' },
+  'out.headline': { en: 'The strongest signal this week is a {p} chance of {event} on {day}.', sv: 'Veckans tydligaste signal är {p} chans för {event} {day}.' },
+  'out.headline.quiet': {
+    en: 'Nothing in the week stands out — no day gives even one member in five anything worth naming. That is itself a forecast: unremarkable weather.',
+    sv: 'Ingenting i veckan sticker ut — ingen dag ger ens var femte medlem något värt att nämna. Det är i sig en prognos: omärkvärdigt väder.',
+  },
+
+  'out.pick.title': { en: 'Where, and how high', sv: 'Var, och hur högt' },
+  'out.pick.sub': {
+    en: 'The ensemble is run at the summit and moved to the height you pick, which decides where the snow line falls.',
+    sv: 'Ensemblen körs på toppen och flyttas till den höjd du väljer, vilket avgör var snögränsen hamnar.',
+  },
+  'out.pick.band': { en: 'Elevation', sv: 'Höjd' },
+
+  'out.grid.title': { en: 'The odds, day by day', sv: 'Oddsen, dag för dag' },
+  'out.grid.sub': {
+    en: 'The share of ensemble members whose own day meets each description. Click a column to see what those members actually look like.',
+    sv: 'Andelen ensemblemedlemmar vars egen dag stämmer med varje beskrivning. Klicka på en kolumn för att se hur de medlemmarna faktiskt ser ut.',
+  },
+  'out.grid.label': { en: 'Probability of each kind of day at {z} m', sv: 'Sannolikhet för varje sorts dag på {z} m' },
+  'out.grid.members': { en: '{n} mem', sv: '{n} med' },
+  'out.grid.note': {
+    en: 'Counted at {z} m across {n} members. A member either delivers the whole day or it does not — the wind and the snow come from the same run, which is what makes these numbers worth more than the sum of separate percentages.',
+    sv: 'Räknat på {z} m över {n} medlemmar. En medlem levererar antingen hela dagen eller inte — vinden och snön kommer från samma körning, och det är det som gör siffrorna värda mer än summan av separata procenttal.',
+  },
+  'out.grid.missing': {
+    en: 'This ensemble run did not carry every variable, so these are shown as unanswerable rather than as zero: {events}.',
+    sv: 'Den här ensemblekörningen saknade vissa variabler, så följande visas som obesvarbara i stället för noll: {events}.',
+  },
+
+  'out.event.powder': { en: 'Powder day', sv: 'Pudderdag' },
+  'out.event.powder.short': { en: '10 cm or more of new snow', sv: '10 cm nysnö eller mer' },
+  'out.event.powder.phrase': { en: 'a powder day', sv: 'en pudderdag' },
+  'out.event.bluebird': { en: 'Bluebird', sv: 'Klarblå dag' },
+  'out.event.bluebird.short': { en: 'dry, calm and genuinely clear', sv: 'torrt, lugnt och verkligt klart' },
+  'out.event.bluebird.phrase': { en: 'a bluebird day', sv: 'en klarblå dag' },
+  'out.event.storm': { en: 'Storm', sv: 'Storm' },
+  'out.event.storm.short': { en: 'gales, or strong wind with heavy precipitation', sv: 'kuling, eller hård vind med kraftig nederbörd' },
+  'out.event.storm.phrase': { en: 'a storm', sv: 'storm' },
+  'out.event.rain': { en: 'Rain on snow', sv: 'Regn på snö' },
+  'out.event.rain.short': { en: 'a millimetre of rain or more', sv: 'en millimeter regn eller mer' },
+  'out.event.rain.phrase': { en: 'rain on the snow', sv: 'regn på snön' },
+  'out.event.hardFreeze': { en: 'Hard freeze', sv: 'Sträng kyla' },
+  'out.event.hardFreeze.short': { en: 'colder than −20 °C at some point', sv: 'kallare än −20 °C någon gång' },
+  'out.event.hardFreeze.phrase': { en: 'a hard freeze', sv: 'sträng kyla' },
+
+  'out.days.title': { en: 'The week in numbers', sv: 'Veckan i siffror' },
+  'out.days.sub': {
+    en: 'Middle of the distribution first, with the range the members actually cover beneath it. A wide range is information, not a failure.',
+    sv: 'Fördelningens mitt först, med spannet medlemmarna faktiskt täcker under. Ett brett spann är information, inte ett misslyckande.',
+  },
+  'out.day.range': { en: '{lo} to {hi}', sv: '{lo} till {hi}' },
+  'out.day.pop': { en: 'Wet (raw)', sv: 'Nederbörd (rå)' },
+  'out.day.popCal': { en: 'Wet', sv: 'Nederbörd' },
+  'out.day.snow': { en: 'New snow', sv: 'Nysnö' },
+  'out.day.snowRange': { en: '{p50} cm, up to {p90}', sv: '{p50} cm, upp till {p90}' },
+  'out.day.wind': { en: 'Peak wind', sv: 'Toppvind' },
+  'out.agree.tight': { en: 'Members agree · {spread}° apart', sv: 'Medlemmarna är eniga · {spread}° isär' },
+  'out.agree.fair': { en: 'Some disagreement · {spread}°', sv: 'Viss oenighet · {spread}°' },
+  'out.agree.loose': { en: 'Wide open · {spread}° apart', sv: 'Vidöppet · {spread}° isär' },
+
+  'out.fan.title': { en: 'Every member, drawn', sv: 'Varje medlem, utritad' },
+  'out.fan.sub': {
+    en: 'One line per member. Where the lines fan out evenly the forecast is simply uncertain; where they split into two bunches, two different weathers are on the table and the average of them will not happen.',
+    sv: 'En linje per medlem. Där linjerna vidgar sig jämnt är prognosen helt enkelt osäker; där de delar sig i två knippen ligger två olika väder på bordet, och medelvärdet av dem kommer inte att inträffa.',
+  },
+  'out.fan.pick': { en: 'Measure', sv: 'Mått' },
+  'out.metric.tmax': { en: 'Day temperature', sv: 'Dagstemperatur' },
+  'out.metric.snow': { en: 'New snow', sv: 'Nysnö' },
+  'out.metric.wind': { en: 'Peak wind', sv: 'Toppvind' },
+  'out.metric.tmax.label': { en: 'Warmest hour each day at {z} m, every ensemble member', sv: 'Varmaste timmen varje dygn på {z} m, varje ensemblemedlem' },
+  'out.metric.tmax.note': {
+    en: 'Temperature is the variable an ensemble handles best, and the one where the spread is most nearly honest. Read the band as roughly where it will land, not as a guarantee it will.',
+    sv: 'Temperaturen är den variabel en ensemble hanterar bäst, och den där spridningen är mest ärlig. Läs bandet som ungefär var det landar, inte som en garanti.',
+  },
+  'out.metric.snow.label': { en: 'New snow per day at {z} m, every ensemble member', sv: 'Nysnö per dygn på {z} m, varje ensemblemedlem' },
+  'out.metric.snow.note': {
+    en: 'Snowfall is where ensembles are least reliable and most useful at once. A median of two centimetres with one member at thirty is not a quiet week — it is a week with a small chance of a very good day, which is exactly what the median hides.',
+    sv: 'Snöfall är där ensembler är som minst tillförlitliga och mest användbara på samma gång. En median på två centimeter med en medlem på trettio är ingen lugn vecka — det är en vecka med liten chans till en mycket bra dag, vilket är just det medianen döljer.',
+  },
+  'out.metric.windMax.label': { en: 'Strongest wind each day at {z} m, every ensemble member', sv: 'Starkaste vinden varje dygn på {z} m, varje ensemblemedlem' },
+  'out.metric.windMax.note': {
+    en: 'The daily maximum, which is what closes a lift or ends a ridge line — not the average, which almost never is the thing that stops you.',
+    sv: 'Dygnets maximum, som är det som stänger en lift eller avslutar en ryggvandring — inte medelvärdet, som nästan aldrig är det som stoppar dig.',
+  },
+  'out.key.median': { en: 'Median member', sv: 'Medianmedlem' },
+  'out.key.middle': { en: 'Middle half', sv: 'Mittersta hälften' },
+  'out.key.outer': { en: '10th–90th', sv: '10:e–90:e' },
+  'out.key.members': { en: '{n} members', sv: '{n} medlemmar' },
+
+  'out.ml.title': { en: 'What the learning actually changed', sv: 'Vad inlärningen faktiskt ändrade' },
+  'out.ml.sub': {
+    en: 'Trained in your browser on the last weeks of archived forecasts against ERA5-Land reanalysis, and checked on a block it never saw. If it does not beat the raw ensemble there it is switched off, and this panel says so either way.',
+    sv: 'Tränad i din webbläsare på de senaste veckornas arkiverade prognoser mot ERA5-Land-reanalysen, och prövad på ett block den aldrig sett. Slår den inte den råa ensemblen där stängs den av, och panelen säger det oavsett vilket.',
+  },
+  'out.ml.none': {
+    en: 'Nothing has been trained for this peak yet. Open its forecast page once and the correction is fitted in the background; until then every number here is the raw ensemble.',
+    sv: 'Ingenting är tränat för den här toppen ännu. Öppna dess prognossida en gång så anpassas korrigeringen i bakgrunden; till dess är varje siffra här den råa ensemblen.',
+  },
+  'out.ml.brierBase': { en: 'Raw ensemble', sv: 'Rå ensemble' },
+  'out.ml.brierBaseNote': { en: 'Brier score of the uncorrected member fraction — lower is better', sv: 'Brier-poäng för den okorrigerade medlemsandelen — lägre är bättre' },
+  'out.ml.brierMl': { en: 'After calibration', sv: 'Efter kalibrering' },
+  'out.ml.brierBetter': { en: 'better than the raw ensemble, so it is being used', sv: 'bättre än den råa ensemblen, så den används' },
+  'out.ml.brierWorse': { en: 'no better than raw, so it has been switched off', sv: 'inte bättre än rå, så den är avstängd' },
+  'out.ml.temp': { en: 'Temperature error', sv: 'Temperaturfel' },
+  'out.ml.tempNote': { en: 'change in mean absolute error on the hold-out block', sv: 'förändring i medelabsolutfel på det avskilda blocket' },
+  'out.ml.trained': { en: 'Trained on', sv: 'Tränad på' },
+  'out.ml.hours': { en: 'hours', sv: 'timmar' },
+  'out.ml.trainedNote': { en: '{n} of them held back and never used for fitting', sv: '{n} av dem undanhållna och aldrig använda vid anpassning' },
+  'out.ml.noteOn': {
+    en: 'The wet-or-dry figure on this page is the calibrated one, fitted against {truth} and shown only because it beat the raw ensemble on data it had not seen. Everything else is counted members.',
+    sv: 'Siffran för nederbörd eller uppehåll på den här sidan är den kalibrerade, anpassad mot {truth} och visad enbart för att den slog den råa ensemblen på data den inte sett. Allt annat är räknade medlemmar.',
+  },
+  'out.ml.noteOff': {
+    en: 'The calibration did not beat the raw ensemble on its hold-out block, so it is off and every figure here is a plain member count. That is the honest outcome, not a fault.',
+    sv: 'Kalibreringen slog inte den råa ensemblen på sitt avskilda block, så den är avstängd och varje siffra här är en ren medlemsräkning. Det är det ärliga utfallet, inte ett fel.',
+  },
+
+  'out.caveats.title': { en: 'How much to trust a percentage', sv: 'Hur mycket ett procenttal är värt' },
+  'out.caveat.1.t': { en: 'An ensemble is a sample of one model’s doubt, not of reality’s.', sv: 'En ensemble är ett stickprov av en modells tvivel, inte av verklighetens.' },
+  'out.caveat.1.b': {
+    en: 'Every member comes from the same forecasting system with the same blind spots. Reality lands outside the members more often than the member count suggests — ensembles are systematically overconfident, and more so for precipitation than for temperature.',
+    sv: 'Varje medlem kommer från samma prognossystem med samma blinda fläckar. Verkligheten hamnar utanför medlemmarna oftare än antalet antyder — ensembler är systematiskt övertygade om sin egen träffsäkerhet, och mer så för nederbörd än för temperatur.',
+  },
+  'out.caveat.2.t': { en: 'Only the rain-or-not figure is calibrated.', sv: 'Bara siffran för nederbörd är kalibrerad.' },
+  'out.caveat.2.b': {
+    en: 'That one has been checked against what actually happened, and the panel above reports its Brier score against the uncorrected ensemble. Every other percentage on this page is the raw share of members, shown as exactly that. A calibrated number and a counted one are not the same kind of claim.',
+    sv: 'Den har prövats mot vad som faktiskt hände, och panelen ovan redovisar dess Brier-poäng mot den okorrigerade ensemblen. Varje annat procenttal på sidan är den råa andelen medlemmar, visad som just det. Ett kalibrerat tal och ett räknat är inte samma slags påstående.',
+  },
+  'out.caveat.3.t': { en: 'Confidence falls off a cliff after about five days.', sv: 'Träffsäkerheten faller brant efter ungefär fem dygn.' },
+  'out.caveat.3.b': {
+    en: 'Day six and day seven are in the outlook because leaving them out would not make them less tempting to guess at. Read them as the shape of the week, never as a plan.',
+    sv: 'Dag sex och sju finns med för att det inte blir mindre frestande att gissa om de utelämnas. Läs dem som veckans form, aldrig som en plan.',
+  },
+  'out.caveat.4.t': { en: 'The members were run at one height.', sv: 'Medlemmarna kördes på en enda höjd.' },
+  'out.caveat.4.b': {
+    en: 'Moving them to another band applies the same lapse rate the forecast uses and decides rain against snow again at that height. That is the dominant effect near the snow line and it is not the only one — nothing here knows about aspect, shading or where the wind stacks the snow.',
+    sv: 'Att flytta dem till ett annat höjdband använder samma temperaturgradient som prognosen och avgör regn mot snö på nytt på den höjden. Det är den dominerande effekten nära snögränsen, och inte den enda — ingenting här känner till väderstreck, skuggning eller var vinden lägger upp snön.',
+  },
+  'out.caveat.5.t': { en: 'A 30 % chance of a powder day is not a small number.', sv: '30 % chans för en pudderdag är inget litet tal.' },
+  'out.caveat.5.b': {
+    en: 'It happens roughly one week in three. The mistake is not reading 30 % as unlikely — it is reading 70 % as certain, and then being surprised on the day it goes the other way.',
+    sv: 'Det inträffar ungefär var tredje vecka. Misstaget är inte att läsa 30 % som osannolikt — det är att läsa 70 % som säkert, och sedan bli överraskad den gång det går åt andra hållet.',
+  },
+  'out.caveats.foot': {
+    en: 'Every threshold on this page — what counts as a powder day, a storm or a bluebird — is listed on the <a href="methods.html#outlook">method page</a>.',
+    sv: 'Varje gränsvärde på den här sidan — vad som räknas som pudderdag, storm eller klarblå dag — står på <a href="methods.html#outlook">metodsidan</a>.',
+  },
+
+  /* ---------- method page: the outlook ---------- */
+  'm.out.1': { en: '10 · Probabilities and the outlook', sv: '10 · Sannolikheter och utsikterna' },
+  'm.out.2': {
+    en: 'Everything behind the <a href="outlook.html">odds</a> page. An ensemble is thirty-odd complete forecasts rather than one; reducing them to a spread per variable throws away whether the same run that gives you the snow also gives you the wind that strips it, so every member is carried through to its own daily totals and an event probability is the share of members whose own day satisfies it.',
+    sv: 'Allt bakom sidan <a href="outlook.html">oddsen</a>. En ensemble är ett trettiotal kompletta prognoser i stället för en; att reducera dem till en spridning per variabel slänger bort om samma körning som ger dig snön också ger vinden som blåser bort den. Därför förs varje medlem fram till sina egna dygnssummor, och en händelses sannolikhet är andelen medlemmar vars egen dag uppfyller den.',
+  },
+  'm.out.3': { en: 'What counts as what', sv: 'Vad som räknas som vad' },
+  'm.out.4': {
+    en: 'Each row is a test applied to one member’s own day at the chosen elevation. Disagree with a threshold and every number derived from it moves — which is the point of printing them.',
+    sv: 'Varje rad är ett test som tillämpas på en medlems egen dag på vald höjd. Håller du inte med om ett gränsvärde flyttar sig varje siffra som bygger på det — vilket är hela poängen med att skriva ut dem.',
+  },
+  'm.out.5': { en: 'Calibration', sv: 'Kalibrering' },
+  'm.out.6': {
+    en: 'Exactly one figure on that page is calibrated: the probability of measurable precipitation, from the logistic model described in section 7, and only when it beat the raw member fraction on its hold-out block by Brier score. Everything else is a plain count of members, labelled as such. Raising a counted frequency to the status of a calibrated probability would be the easiest lie on the site to tell and the hardest for a reader to catch.',
+    sv: 'Exakt en siffra på den sidan är kalibrerad: sannolikheten för mätbar nederbörd, från den logistiska modellen i avsnitt 7, och bara när den slog den råa medlemsandelen på sitt avskilda block enligt Brier-poäng. Allt annat är en ren räkning av medlemmar, märkt som sådan. Att upphöja en räknad frekvens till kalibrerad sannolikhet vore den lättaste lögnen på sajten att berätta och den svåraste för en läsare att upptäcka.',
+  },
+  'm.out.7': { en: 'Phase, without humidity', sv: 'Fas, utan luftfuktighet' },
+  'm.out.8': {
+    en: 'The forecast decides rain against snow from the wet-bulb temperature. Ensemble members do not carry humidity, so the outlook falls back to air temperature at the band, splitting precipitation across the sleet range rather than forcing it to one side. It is a coarser rule than the one on the forecast page, and it is used only here.',
+    sv: 'Prognosen avgör regn mot snö utifrån våttemperaturen. Ensemblemedlemmar bär inte luftfuktighet, så utsikterna faller tillbaka på lufttemperaturen på höjdbandet och delar nederbörden över snöblandat-intervallet i stället för att tvinga den åt ett håll. Det är en grövre regel än den på prognossidan, och den används bara här.',
+  },
+  'm.out.event': { en: 'Kind of day', sv: 'Sorts dag' },
+  'm.out.test': { en: 'Counted when a member’s day has', sv: 'Räknas när en medlems dygn har' },
+  'm.out.needs': { en: 'Needs', sv: 'Kräver' },
+  'm.out.needs.cloud': { en: 'cloud cover', sv: 'molnmängd' },
+  'm.out.needs.none': { en: '—', sv: '—' },
+  'm.out.test.powder': { en: '10 cm or more of new snow at the chosen elevation', sv: '10 cm nysnö eller mer på vald höjd' },
+  'm.out.test.bluebird': { en: 'under 0.5 mm of precipitation, peak wind under 9 m/s, and mean cloud below 40 % between 09 and 16', sv: 'under 0,5 mm nederbörd, toppvind under 9 m/s och medelmolnighet under 40 % mellan 09 och 16' },
+  'm.out.test.storm': { en: 'peak wind of 20 m/s or more, or 15 m/s with at least 8 mm of precipitation', sv: 'toppvind på 20 m/s eller mer, eller 15 m/s med minst 8 mm nederbörd' },
+  'm.out.test.rain': { en: 'a millimetre of rain or more, after phase is decided at that elevation', sv: 'en millimeter regn eller mer, efter att fasen avgjorts på den höjden' },
+  'm.out.test.hardFreeze': { en: 'a minimum at or below −20 °C', sv: 'ett minimum på −20 °C eller lägre' },
 
   /* ---------- the warming page ---------- */
   'page.warming.title': { en: 'How long does winter have left? — ÅreWeather', sv: 'Hur länge har vintern kvar? — ÅreWeather' },

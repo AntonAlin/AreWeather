@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title data-i18n="page.outlook.title">Chances, not promises — ÅreWeather</title>
+<meta name="description" data-i18n-content="page.outlook.description" content="A probabilistic week for the Åre fjäll: the chance of a powder day, a bluebird day, a storm or rain on snow, counted across every ensemble member and calibrated against measured skill.">
+<meta name="theme-color" content="#06080b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M6 82 38 26l17 29 9-14 24 41z' fill='%234fd1ff'/%3E%3Cpath d='M38 26l10 18-10 8-9-7z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip-link" href="#grid-card" data-i18n="nav.skipContent">Skip to the content</a>
+<div class="aurora" aria-hidden="true"><span class="a1"></span><span class="a2"></span><span class="a3"></span></div>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="./">
+      <svg class="brand-mark" viewBox="0 0 100 100" aria-hidden="true"><path d="M4 84 38 24l17 30 9-15 28 45z"/><path d="M38 24l10 18-10 9-9-8z" class="snow"/></svg>
+      <span class="brand-text">ÅRE<b>WEATHER</b><i data-i18n="brand.outlook">the odds</i></span>
+    </a>
+    <div class="topbar-actions">
+      <div class="seg" id="lang-toggle" role="group" data-i18n-label="lang.group" aria-label="Language"></div>
+      <a class="nav-link" href="compare.html" data-i18n="nav.compare">Compare peaks</a>
+      <a class="nav-link" href="trip.html" data-i18n="nav.trip">Plan a trip</a>
+      <a class="nav-link" href="warming.html" data-i18n="nav.warming">Winter ahead</a>
+      <button type="button" class="status-pill" id="status-pill" data-i18n-title="status.refresh" title="Data status">
+        <span class="dot"></span><span id="status-text" role="status" aria-live="polite" data-i18n="status.loading">Loading…</span>
+      </button>
+      <a class="back-link" href="./" data-i18n="nav.back">← Back to the forecast</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" style="padding: 22px 0 64px; display: grid; gap: 18px;">
+
+  <section class="card doc-hero">
+    <h1 data-i18n="out.h1">Chances, not promises</h1>
+    <p class="lede" data-i18n="out.lede">A forecast that says “12 cm of snow” is one guess dressed as a fact. This page runs the whole ensemble instead — every member is a complete, self-consistent week — and counts how many of them deliver the day you are hoping for. Nine out of thirty is a real answer. It is also a different one from “probably not”.</p>
+    <div class="pill-row">
+      <span class="pill" id="out-members"></span>
+      <span class="pill" id="out-system"></span>
+      <span class="pill" id="out-ml"></span>
+    </div>
+    <p class="headline" id="out-headline"></p>
+  </section>
+
+  <!-- pickers -->
+  <section class="card" id="picker-card">
+    <div class="card-head">
+      <div>
+        <h2 data-i18n="out.pick.title">Where, and how high</h2>
+        <p class="sub" data-i18n="out.pick.sub">The ensemble is run at the summit and moved to the height you pick, which decides where the snow line falls.</p>
+      </div>
+      <div class="seg" id="out-band" role="group" data-i18n-label="out.pick.band" aria-label="Elevation"></div>
+    </div>
+    <nav class="mountain-rail" id="peak-rail" data-i18n-label="rail.group" aria-label="Choose a mountain"></nav>
+  </section>
+
+  <!-- the grid -->
+  <section class="card" id="grid-card">
+    <h2 data-i18n="out.grid.title">The odds, day by day</h2>
+    <p class="sub" data-i18n="out.grid.sub">The share of ensemble members whose own day meets each description. Click a column to see what those members actually look like.</p>
+    <div id="event-grid" class="chart-wrap"></div>
+    <p class="note" id="grid-note"></p>
+  </section>
+
+  <!-- day cards -->
+  <section class="card" id="days-card">
+    <h2 data-i18n="out.days.title">The week in numbers</h2>
+    <p class="sub" data-i18n="out.days.sub">Middle of the distribution first, with the range the members actually cover beneath it. A wide range is information, not a failure.</p>
+    <div id="day-cards" class="day-grid"></div>
+  </section>
+
+  <!-- the fan -->
+  <section class="card" id="fan-card">
+    <div class="card-head">
+      <div>
+        <h2 data-i18n="out.fan.title">Every member, drawn</h2>
+        <p class="sub" data-i18n="out.fan.sub">One line per member. Where the lines fan out evenly the forecast is simply uncertain; where they split into two bunches, two different weathers are on the table and the average of them will not happen.</p>
+      </div>
+      <div class="seg" id="fan-metric" role="group" data-i18n-label="out.fan.pick" aria-label="Measure">
+        <button type="button" class="on" data-metric="tmax" data-i18n="out.metric.tmax">Day temperature</button>
+        <button type="button" data-metric="snow" data-i18n="out.metric.snow">New snow</button>
+        <button type="button" data-metric="windMax" data-i18n="out.metric.wind">Peak wind</button>
+      </div>
+    </div>
+    <div id="fan" class="chart-wrap"></div>
+    <p class="note" id="fan-note"></p>
+  </section>
+
+  <!-- what the ML does -->
+  <section class="card" id="ml-card">
+    <h2 data-i18n="out.ml.title">What the learning actually changed</h2>
+    <p class="sub" data-i18n="out.ml.sub">Trained in your browser on the last weeks of archived forecasts against ERA5-Land reanalysis, and checked on a block it never saw. If it does not beat the raw ensemble there it is switched off, and this panel says so either way.</p>
+    <div class="intel-grid" id="ml-facts"></div>
+    <p class="note" id="ml-note"></p>
+  </section>
+
+  <!-- caveats -->
+  <section class="card" id="out-caveats">
+    <h2 data-i18n="out.caveats.title">How much to trust a percentage</h2>
+    <div class="doc-body">
+      <ul class="caveat-list">
+        <li><b data-i18n="out.caveat.1.t">An ensemble is a sample of one model’s doubt, not of reality’s.</b> <span data-i18n="out.caveat.1.b">Every member comes from the same forecasting system with the same blind spots. Reality lands outside the members more often than the member count suggests — ensembles are systematically overconfident, and more so for precipitation than for temperature.</span></li>
+        <li><b data-i18n="out.caveat.2.t">Only the rain-or-not figure is calibrated.</b> <span data-i18n="out.caveat.2.b">That one has been checked against what actually happened, and the panel above reports its Brier score against the uncorrected ensemble. Every other percentage on this page is the raw share of members, shown as exactly that. A calibrated number and a counted one are not the same kind of claim.</span></li>
+        <li><b data-i18n="out.caveat.3.t">Confidence falls off a cliff after about five days.</b> <span data-i18n="out.caveat.3.b">Day six and day seven are in the outlook because leaving them out would not make them less tempting to guess at. Read them as the shape of the week, never as a plan.</span></li>
+        <li><b data-i18n="out.caveat.4.t">The members were run at one height.</b> <span data-i18n="out.caveat.4.b">Moving them to another band applies the same lapse rate the forecast uses and decides rain against snow again at that height. That is the dominant effect near the snow line and it is not the only one — nothing here knows about aspect, shading or where the wind stacks the snow.</span></li>
+        <li><b data-i18n="out.caveat.5.t">A 30 % chance of a powder day is not a small number.</b> <span data-i18n="out.caveat.5.b">It happens roughly one week in three. The mistake is not reading 30 % as unlikely — it is reading 70 % as certain, and then being surprised on the day it goes the other way.</span></li>
+      </ul>
+      <p class="tiny" data-i18n-html="out.caveats.foot">Every threshold on this page — what counts as a powder day, a storm or a bluebird — is listed on the <a href="methods.html#outlook">method page</a>.</p>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p data-i18n-html="footer.attributionShort">placeholder</p>
+  </footer>
+</main>
+<script type="module" src="js/outlook.js"></script>
+</body>
+</html>

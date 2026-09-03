@@ -160,15 +160,18 @@ export function fetchAux(mtn, opts) {
 /** Ensemble members for probabilistic spread. First system that answers wins. */
 export function fetchEnsemble(mtn, opts) {
   const base = {
-    ...COMMON, latitude: mtn.lat, longitude: mtn.lon, elevation: mtn.summit, forecast_days: 6,
+    ...COMMON, latitude: mtn.lat, longitude: mtn.lon, elevation: mtn.summit, forecast_days: APP.forecastDays,
   };
-  return withCache(`ensemble.${mtn.id}`, TTL.ensemble, async () => {
+  return withCache(`ensemble.${mtn.id}.v2`, TTL.ensemble, async () => {
+    /* Cloud cover is only wanted by the outlook page, and only some ensemble
+       systems carry it, so it leads the ladder and is the first thing dropped. */
     const variants = ENSEMBLE_MODELS.flatMap((m) => [
+      { ...base, hourly: ['temperature_2m', 'precipitation', 'wind_speed_10m', 'snowfall', 'cloud_cover'], models: m },
       { ...base, hourly: ['temperature_2m', 'precipitation', 'wind_speed_10m', 'snowfall'], models: m },
       { ...base, hourly: ['temperature_2m', 'precipitation'], models: m },
     ]);
     const { data, params } = await tryVariants(ENDPOINTS.ensemble, variants, 30000);
-    return { ...data, _model: params.models };
+    return { ...data, _model: params.models, _vars: params.hourly };
   }, opts);
 }
 

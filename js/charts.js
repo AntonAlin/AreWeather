@@ -1,7 +1,7 @@
 /* Hand-rolled SVG visualisation. No chart library: every mark here needs to
    know about elevation, phase or wind, and generic charting tools fight that. */
 
-import { svgEl, tempColor, windColor, precipColor, clamp, lerp, fmtHour, fmtShortDay, fmtWind, compass, dec } from './util.js';
+import { svgEl, tempColor, windColor, precipColor, clamp, lerp, fmtHour, fmtShortDay, fmtWind, compass, dec, parseLocal } from './util.js';
 import { t } from './i18n.js';
 
 const AXIS = '#66717f';
@@ -700,4 +700,143 @@ export function renderStaircase(container, bands, { threshold, thresholdLabel, u
     [COLORS.present, t('warm.period.present'), 'block'],
     [COLORS.future, t('warm.period.future'), 'block'],
   ]);
+}
+
+
+/* ---------- the outlook page ---------- */
+
+/**
+ * Every ensemble member as its own line, with the quantile bands behind them.
+ *
+ * The spaghetti is the point. A shaded band alone reads as a smooth cone of
+ * uncertainty; the lines show what the band is actually made of — often two
+ * clusters rather than a spread, which is a different forecast entirely and one
+ * a p10-p90 ribbon hides completely.
+ */
+export function renderFan(container, { fan, lines, unit, label, zero = false, width = 860 }) {
+  const height = 260;
+  const pad = { l: 42, r: 16, t: 18, b: 34 };
+  const svg = frame(container, width, height, label);
+  const plotW = width - pad.l - pad.r;
+  const plotH = height - pad.t - pad.b;
+  const valid = fan.filter((d) => Number.isFinite(d.q[0.5]));
+  if (valid.length < 2) return;
+
+  const all = [
+    ...fan.flatMap((d) => Object.values(d.q)),
+    ...lines.flatMap((l) => l.values),
+  ].filter(Number.isFinite);
+  const lo = Math.min(zero ? 0 : Infinity, Math.min(...all));
+  const hi = Math.max(...all);
+  const padY = Math.max(1, (hi - lo) * 0.12);
+  const y0 = lo - padY;
+  const y1 = hi + padY;
+  const x = (i) => pad.l + (fan.length === 1 ? plotW / 2 : (i / (fan.length - 1)) * plotW);
+  const y = (v) => pad.t + (1 - (v - y0) / (y1 - y0 || 1)) * plotH;
+
+  const step = niceStep(y1 - y0);
+  for (let v = Math.ceil(y0 / step) * step; v <= y1; v += step) {
+    const isZero = Math.abs(v) < 1e-9;
+    svgEl('line', {
+      x1: pad.l, y1: y(v), x2: width - pad.r, y2: y(v),
+      stroke: isZero ? 'rgba(251,191,36,.35)' : GRID, 'stroke-dasharray': isZero ? '4 4' : '2 6',
+    }, svg);
+    text(svg, pad.l - 6, y(v) + 3.5, `${dec(v, 0)}`, { size: 9, anchor: 'end' });
+  }
+  if (unit) text(svg, pad.l - 6, pad.t - 6, unit, { size: 8.5, anchor: 'end', tracking: 0.5 });
+
+  const ribbon = (a, b, fill) => {
+    const up = fan.map((d, i) => `${x(i)} ${y(d.q[a])}`);
+    const dn = [...fan].reverse().map((d, i) => `${x(fan.length - 1 - i)} ${y(d.q[b])}`);
+    svgEl('path', { d: `M ${[...up, ...dn].join(' L ')} Z`, fill, stroke: 'none' }, svg);
+  };
+  ribbon(0.9, 0.1, 'rgba(79,209,255,.13)');
+  ribbon(0.75, 0.25, 'rgba(79,209,255,.22)');
+
+  /* one faint line per member */
+  for (const l of lines) {
+    const pts = l.values.map((v, i) => (Number.isFinite(v) ? `${x(i)},${y(v)}` : null)).filter(Boolean);
+    if (pts.length < 2) continue;
+    svgEl('polyline', {
+      points: pts.join(' '), fill: 'none', stroke: 'rgba(224,242,254,.42)',
+      'stroke-width': 1, 'stroke-linejoin': 'round',
+    }, svg);
+  }
+
+  svgEl('polyline', {
+    points: fan.map((d, i) => `${x(i)},${y(d.q[0.5])}`).join(' '),
+    fill: 'none', stroke: '#4fd1ff', 'stroke-width': 2.4, 'stroke-linejoin': 'round',
+  }, svg);
+
+  fan.forEach((d, i) => {
+    const when = parseLocal(`${d.date}T12:00`);
+    if (when) text(svg, x(i), height - pad.b + 16, fmtShortDay(when), { size: 8.5, anchor: 'middle', mono: false });
+  });
+
+  key(container, [
+    ['#4fd1ff', t('out.key.median')],
+    ['rgba(79,209,255,.22)', t('out.key.middle'), 'block'],
+    ['rgba(79,209,255,.13)', t('out.key.outer'), 'block'],
+    ['rgba(224,242,254,.55)', t('out.key.members', { n: lines.length })],
+  ]);
+}
+
+/** Probability shading: white-blue for the good events, amber-rose for the bad. */
+function probColor(p, kind) {
+  if (!Number.isFinite(p)) return 'rgba(255,255,255,.04)';
+  const a = 0.06 + p * 0.72;
+  if (kind === 'bad') return `rgba(251,113,133,${a.toFixed(3)})`;
+  if (kind === 'cold') return `rgba(167,139,250,${a.toFixed(3)})`;
+  return `rgba(79,209,255,${a.toFixed(3)})`;
+}
+
+/**
+ * Events down the side, days across the top, probability in the cell.
+ *
+ * The number is printed in every cell rather than left to the shading: a colour
+ * ramp is quick to scan but is read differently by different people, and the
+ * difference between 20 % and 40 % is the whole decision.
+ */
+export function renderEventGrid(container, { days, events, label, onPick, selected, width = 860 }) {
+  container.textContent = '';
+  if (!days.length) return;
+  const rowH = 40;
+  const pad = { l: 168, r: 8, t: 34, b: 8 };
+  const height = pad.t + pad.b + events.length * rowH;
+  const svg = frame(container, width, height, label);
+  const colW = (width - pad.l - pad.r) / days.length;
+
+  days.forEach((d, i) => {
+    const cx = pad.l + i * colW + colW / 2;
+    if (d.when) {
+      text(svg, cx, pad.t - 18, fmtShortDay(d.when), { size: 9.5, anchor: 'middle', fill: '#c3ccd8', mono: false, weight: 600 });
+      text(svg, cx, pad.t - 7, t('out.grid.members', { n: d.members }), { size: 7.5, anchor: 'middle', fill: '#66717f' });
+    }
+    if (d.date === selected) {
+      svgEl('rect', {
+        x: pad.l + i * colW + 1, y: pad.t - 30, width: colW - 2, height: height - pad.t - pad.b + 30,
+        fill: 'none', stroke: 'rgba(255,255,255,.35)', 'stroke-width': 1.2, rx: 8,
+      }, svg);
+    }
+  });
+
+  events.forEach((e, r) => {
+    const yy = pad.t + r * rowH;
+    text(svg, pad.l - 12, yy + rowH / 2 + 1, t(`out.event.${e.id}`), { size: 10.5, anchor: 'end', fill: '#e6edf5', mono: false, weight: 550 });
+    text(svg, pad.l - 12, yy + rowH / 2 + 13, t(`out.event.${e.id}.short`), { size: 8, anchor: 'end', fill: '#66717f', mono: false });
+    days.forEach((d, i) => {
+      const p = d.events[e.id];
+      const cell = svgEl('rect', {
+        x: pad.l + i * colW + 2, y: yy + 3, width: colW - 4, height: rowH - 6,
+        fill: probColor(p, e.kind), rx: 7, role: onPick ? 'button' : null,
+        style: onPick ? 'cursor:pointer' : null,
+      }, svg);
+      if (onPick) cell.addEventListener('click', () => onPick(d.date));
+      const shown = p === null ? '–' : `${Math.round(p * 100)}%`;
+      text(svg, pad.l + i * colW + colW / 2, yy + rowH / 2 + 4, shown, {
+        size: 11, anchor: 'middle', weight: 600,
+        fill: Number.isFinite(p) && p > 0.55 ? '#06080b' : '#e6edf5',
+      });
+    });
+  });
 }

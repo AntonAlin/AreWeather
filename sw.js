@@ -2,15 +2,16 @@
    payloads are cached by the app itself in localStorage, where it can reason
    about how old they are and tell you. */
 
-const CACHE = 'areweather-shell-v7';
+const CACHE = 'areweather-shell-v8';
 const SHELL = [
-  './', './index.html', './compare.html', './methods.html', './trip.html', './links.html', './warming.html',
+  './', './index.html', './compare.html', './methods.html', './trip.html', './links.html', './warming.html', './outlook.html',
   './styles.css', './manifest.webmanifest',
   './js/main.js', './js/config.js', './js/util.js', './js/api.js',
   './js/physics.js', './js/ml.js', './js/forecast.js', './js/charts.js', './js/ui.js',
   './js/methods.js', './js/compare.js', './js/i18n.js', './js/observations.js',
   './js/climate.js', './js/trip.js', './js/links.js',
-  './js/projection.js', './js/warming.js', './404.html',
+  './js/projection.js', './js/warming.js',
+  './js/probability.js', './js/outlook.js', './404.html',
   './fonts/inter-latin.woff2', './fonts/jetbrains-mono-latin.woff2',
 ];
 

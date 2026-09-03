@@ -2,7 +2,7 @@
    on. Nothing here is a transcription of the code — if a constant changes, this
    page changes with it, which is the only way documentation stays true. */
 
-import { APP, PHYS, PRESSURE_LEVELS, MOUNTAINS, MODELS, ACTIVITIES, SCORING, SOURCES, CONTACT, SMHI, CLIMATE_MODELS, WARMING, activitiesFor } from './config.js';
+import { APP, PHYS, PRESSURE_LEVELS, MOUNTAINS, MODELS, ACTIVITIES, SCORING, SOURCES, CONTACT, SMHI, CLIMATE_MODELS, WARMING, OUTLOOK, activitiesFor } from './config.js';
 import { TEMP_FEATURES } from './ml.js';
 import { snowRatio } from './physics.js';
 import { $, $$, el, round } from './util.js';
@@ -213,7 +213,16 @@ table('#mountains-table',
     `<span class="num">${m.lat.toFixed(4)}°N ${m.lon.toFixed(4)}°E</span>`,
   ]));
 
-/* ---------- 10. climate projections ---------- */
+/* ---------- 10. the outlook ---------- */
+table('#events-table',
+  [t('m.out.event'), t('m.out.test'), t('m.out.needs')],
+  OUTLOOK.events.map((e) => [
+    t(`out.event.${e.id}`),
+    t(`m.out.test.${e.id}`),
+    e.needs ? t(`m.out.needs.${e.needs}`) : t('m.out.needs.none'),
+  ]));
+
+/* ---------- 11. climate projections ---------- */
 table('#climate-models-table',
   [t('m.warm.model'), t('m.warm.centre'), t('tbl.country'), t('m.warm.native')],
   CLIMATE_MODELS.map((m) => [
