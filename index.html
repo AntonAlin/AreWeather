@@ -47,6 +47,10 @@
 
 <main class="wrap" id="main">
 
+  <!-- The one sentence the site exists to produce. Everything below is the
+       working; a visitor who reads only this has still been served. -->
+  <section class="answer" id="answer" aria-live="polite"></section>
+
   <section class="hero card" id="hero">
     <div class="hero-skeleton"><span></span><span></span><span></span></div>
   </section>
@@ -93,10 +97,13 @@
     </section>
   </div>
 
-  <section class="card" id="aspect-card">
+  <details class="card fold" id="aspect-card">
+    <summary>
+      <span class="fold-head"><span class="fold-title" data-i18n="aspect.title">Which side of the mountain</span><span class="fold-peek"></span></span>
+    </summary>
+    <div class="fold-body">
       <div class="card-head">
         <div>
-          <h2 data-i18n="aspect.title">Which side of the mountain</h2>
           <p class="sub" data-i18n="aspect.sub">Wind strips one side and loads the other.</p>
         </div>
         <div class="controls">
@@ -108,27 +115,28 @@
         </div>
       </div>
       <div id="aspect"></div>
-  </section>
-
-  <section class="card" id="climate-card">
-    <div class="card-head">
-      <div>
-        <h2 data-i18n="climate.title">Is this normal?</h2>
-        <p class="sub" data-i18n="climate.sub">Today against thirty years of the same date.</p>
-      </div>
     </div>
-    <div id="climate"><p class="sub" data-i18n="climate.loading">Reading thirty years of archive…</p></div>
-  </section>
+  </details>
 
-  <section class="card" id="obs-card">
-    <div class="card-head">
-      <div>
-        <h2 data-i18n="obs.title">Ground truth</h2>
-        <p class="sub" data-i18n="obs.sub">Live readings from the nearest SMHI stations, and how the forecast compares against them right now.</p>
-      </div>
+  <details class="card fold" id="climate-card">
+    <summary>
+      <span class="fold-head"><span class="fold-title" data-i18n="climate.title">Is this normal?</span><span class="fold-peek"></span></span>
+    </summary>
+    <div class="fold-body">
+      <p class="sub" data-i18n="climate.sub">Today against thirty years of the same date.</p>
+      <div id="climate"><p class="sub" data-i18n="climate.loading">Reading thirty years of archive…</p></div>
     </div>
-    <div id="observations"><p class="sub" data-i18n="obs.reading">Reading the stations…</p></div>
-  </section>
+  </details>
+
+  <details class="card fold" id="obs-card">
+    <summary>
+      <span class="fold-head"><span class="fold-title" data-i18n="obs.title">Ground truth</span><span class="fold-peek"></span></span>
+    </summary>
+    <div class="fold-body">
+      <p class="sub" data-i18n="obs.sub">Live readings from the nearest SMHI stations, and how the forecast compares against them right now.</p>
+      <div id="observations"><p class="sub" data-i18n="obs.reading">Reading the stations…</p></div>
+    </div>
+  </details>
 
   <section class="card" id="hourly-card">
     <div class="card-head">
@@ -142,20 +150,33 @@
   </section>
 
   <div class="split">
-    <section class="card" id="models-card">
-      <div class="card-head"><div><h2 data-i18n="models.title">Model agreement</h2><p class="sub" id="models-sub">Weighted by measured 45-day skill over this exact point.</p></div></div>
-      <div id="models"></div>
-    </section>
+    <details class="card fold" id="models-card">
+      <summary>
+        <span class="fold-head"><span class="fold-title" data-i18n="models.title">Model agreement</span><span class="fold-peek"></span></span>
+      </summary>
+      <div class="fold-body">
+        <p class="sub" id="models-sub">Weighted by measured 45-day skill over this exact point.</p>
+        <div id="models"></div>
+      </div>
+    </details>
 
-    <section class="card" id="ml-card">
-      <div class="card-head"><div><h2 data-i18n="ml.title">Learning log</h2><p class="sub" data-i18n="ml.sub">What the in-browser model learned and how much it actually helped.</p></div></div>
-      <div id="ml"></div>
-    </section>
+    <details class="card fold" id="ml-card">
+      <summary>
+        <span class="fold-head"><span class="fold-title" data-i18n="ml.title">Learning log</span><span class="fold-peek"></span></span>
+      </summary>
+      <div class="fold-body">
+        <p class="sub" data-i18n="ml.sub">What the in-browser model learned and how much it actually helped.</p>
+        <div id="ml"></div>
+      </div>
+    </details>
   </div>
 
-  <section class="card method" id="method">
+  <details class="card method fold" id="method">
+    <summary>
+      <span class="fold-head"><span class="fold-title" data-i18n="method.title">How this forecast is made</span><span class="fold-peek" data-i18n="method.sub">No black boxes — the summary is here, every formula and licence is on the method page.</span></span>
+    </summary>
+    <div class="fold-body">
     <div class="card-head">
-      <div><h2 data-i18n="method.title">How this forecast is made</h2><p class="sub" data-i18n="method.sub">No black boxes — the summary is here, every formula and licence is on the method page.</p></div>
       <div class="controls"><a class="nav-link" href="methods.html" data-i18n="method.link">Full method, sources &amp; licences →</a></div>
     </div>
     <ol class="method-list">
@@ -167,7 +188,8 @@
       <li data-i18n-html="method.step6"><b>Ensemble probabilities</b> come from a 30+ member ICON-EU / GFS ensemble, giving the p10–p90 bands and the chance of precipitation.</li>
     </ol>
     <p class="disclaimer" data-i18n-html="method.disclaimer"><b>This is not an avalanche forecast.</b> Wind-loading and new-snow numbers are meteorological indices only. For avalanche danger in the Swedish fjäll always use <a href="https://www.lavinprognoser.se" target="_blank" rel="noopener">lavinprognoser.se</a>, and for official warnings <a href="https://www.smhi.se" target="_blank" rel="noopener">SMHI</a>. Mountain weather kills people who trust a screen over their eyes.</p>
-  </section>
+    </div>
+  </details>
 
   <footer class="footer">
     <p data-i18n-html="footer.attribution">placeholder</p>

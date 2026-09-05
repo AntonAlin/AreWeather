@@ -3,7 +3,7 @@
 import { APP, MOUNTAINS } from './config.js';
 import { fetchSurface, fetchProfile, fetchEnsemble, fetchTraining, fetchObservations, fetchClimate, keepClimate, purgeCache } from './api.js';
 import { train } from './ml.js';
-import { assemble } from './forecast.js';
+import { assemble, dailySummaries } from './forecast.js';
 import { renderMatrix, renderProfile, renderHourly } from './charts.js';
 import {
   renderRail, renderHero, renderIntel, renderModels, renderML, renderLegend,
@@ -12,8 +12,8 @@ import {
 import { summarise, weekly, contextFor } from './climate.js';
 import { parseStationSet, buildObservations } from './observations.js';
 import { SMHI } from './config.js';
-import { $, $$, el, store, clamp, ago, nowIsoHour } from './util.js';
-import { t, applyTranslations, renderLangToggle } from './i18n.js';
+import { $, $$, el, store, clamp, ago, nowIsoHour, scoreColor, fmtDay, fmtWeekday, fmtClock, dec } from './util.js';
+import { t, tr, applyTranslations, renderLangToggle } from './i18n.js';
 
 const NS = `areweather.${APP.version}`;
 const tip = tooltip();
@@ -21,7 +21,7 @@ const tip = tooltip();
 const state = {
   mountainId: null,
   unit: store.get(`${NS}.unit`) ?? 'ms',
-  activity: store.get(`${NS}.activity`) ?? 'trail',
+  activity: store.get(`${NS}.activity`) ?? null,
   aspectLens: 'wind',
   climate: null,
   metric: 'temp',
@@ -77,8 +77,13 @@ async function load(id, { force = false } = {}) {
     ml,
   });
   state.nowIndex = Math.max(0, state.model.hours.findIndex((h) => h.iso.slice(0, 13) === nowIsoHour(APP.timezone)));
-  // Fall back if the remembered activity does not exist on this peak.
-  if (!state.model.activities.some((a) => a.id === state.activity)) state.activity = state.model.activities[0].id;
+  /* A first visit has nothing remembered, and defaulting to a fixed sport meant
+     the page could open on something out of season while three others were in
+     good condition. Open on whatever this peak is actually best for today; a
+     remembered choice still wins, and still falls back if the peak lacks it. */
+  if (!state.activity || !state.model.activities.some((a) => a.id === state.activity)) {
+    state.activity = bestActivityNow() ?? state.model.activities[0].id;
+  }
   state.selected = state.nowIndex;
   state.bandZ = mtn.summit;
   renderAll();
@@ -119,6 +124,7 @@ function renderClimateCard() {
   const climate = state.climate;
   if (!climate || climate.error) {
     renderClimate($('#climate'), state.model, climate, state);
+    syncFolds();
     return;
   }
   const h = state.model.hours[state.selected] ?? state.model.hours[0];
@@ -133,6 +139,7 @@ function renderClimateCard() {
     precip: sameDay.reduce((a, x) => a + (x.summit.precip || 0), 0),
   });
   renderClimate($('#climate'), { ...state.model, dailySummary: [{ time: h.time }] }, { ...climate, context }, state);
+  syncFolds();
 }
 
 /* ---------- SMHI observations ----------
@@ -154,6 +161,7 @@ async function loadObservations() {
     }
     if (state.mountainId !== mountainAtStart || !state.model) return;
     renderObservations($('#observations'), state.model, buildObservations(state.model, stationSets), state);
+    syncFolds();
   } catch (err) {
     const node = $('#observations');
     node.textContent = '';
@@ -215,15 +223,130 @@ state.onActivity = (id) => {
   renderHero($('#hero'), state.model, state);
 };
 
+/** The activity scoring highest at the current hour on this peak. */
+function bestActivityNow() {
+  const m = state.model;
+  const h = m?.hours?.[Math.max(0, state.nowIndex)];
+  if (!h) return null;
+  const ranked = m.activities
+    .map((a) => ({ id: a.id, score: h.scores[a.id]?.score ?? 0 }))
+    .sort((a, b) => b.score - a.score);
+  return ranked[0]?.id ?? null;
+}
+
+/* ---------- the answer ----------
+   Ten cards of analysis are worth nothing to someone who wanted to know
+   whether to drive up on Saturday. This is that answer, computed from the
+   forecast already in hand — it costs no extra request — with the week beside
+   it so the recommendation can be argued with rather than just accepted. */
+/* Each folded card quotes its own headline in the summary, so the answer is
+   readable without opening it. It quotes what the card actually rendered
+   (marked data-peek) rather than computing a second version that could drift
+   away from the first. */
+/* textContent runs block elements together ("...at 380 m.Model 0.6°"), and
+   innerText is empty inside a closed <details>, so walk it and space the
+   element boundaries by hand. */
+function flatten(node) {
+  let out = '';
+  for (const n of node.childNodes) out += n.nodeType === 3 ? n.textContent : ` ${flatten(n)} `;
+  return out;
+}
+
+function syncFolds() {
+  for (const d of $$('details.fold')) {
+    const peek = d.querySelector('.fold-peek');
+    if (!peek || peek.hasAttribute('data-i18n')) continue;
+    const src = d.querySelector('[data-peek]');
+    peek.textContent = src ? flatten(src).trim().replace(/\s+/g, ' ') : '';
+  }
+}
+
+function renderAnswer() {
+  const m = state.model;
+  const node = $('#answer');
+  node.textContent = '';
+  if (!m) return;
+
+  const days = dailySummaries(m, state.activity).filter((d) => d.best && !d.partial);
+  if (!days.length) return;
+  const best = days.reduce((a, d) => (d.best.score > a.best.score ? d : a));
+  const activity = m.activities.find((a) => a.id === state.activity);
+
+  const wrap = el('div', { class: 'answer-in' }, node);
+  const main = el('div', { class: 'answer-main' }, wrap);
+
+  el('div', { class: 'answer-eyebrow', text: t('answer.eyebrow', { activity: tr(activity?.name) || '', mtn: m.mtn.name }) }, main);
+
+  /* Out of season, or simply bad all week, is an answer too — and a more
+     useful one than a cheerful "best window" nobody should act on. */
+  const verdict = el('p', { class: 'answer-line' }, main);
+  if (best.best.score < 35) {
+    /* Saying "nothing is worth it" while three other sports are in good
+       condition is technically true and useless. Name the one that is. */
+    const alt = m.activities
+      .filter((a) => a.id !== state.activity)
+      .map((a) => ({ a, d: dailySummaries(m, a.id).filter((x) => x.best && !x.partial) }))
+      .map(({ a, d }) => ({ a, best: d.length ? d.reduce((x, y) => (y.best.score > x.best.score ? y : x)) : null }))
+      .filter((x) => x.best && x.best.best.score >= 50)
+      .sort((x, y) => y.best.best.score - x.best.best.score)[0];
+    verdict.innerHTML = alt
+      ? t('answer.insteadTry', {
+        activity: (tr(activity?.name) || '').toLowerCase(),
+        other: `<b>${tr(alt.a.name)}</b>`,
+        day: `<b>${fmtDay(alt.best.best.startTime)}</b>`,
+      })
+      : t('answer.nothing', { activity: (tr(activity?.name) || '').toLowerCase() });
+  } else {
+    verdict.innerHTML = t('answer.best', {
+      day: `<b>${fmtDay(best.best.startTime)}</b>`,
+      from: `<b>${fmtClock(best.best.startTime)}</b>`,
+      to: `<b>${fmtClock(best.best.endTime)}</b>`,
+      label: t(best.best.labelKey),
+    });
+  }
+  if (best.best.why?.length) {
+    el('p', { class: 'answer-why', text: t('answer.limited', { factors: best.best.why.map(tr).join(', ') }) }, main);
+  }
+  const links = el('p', { class: 'answer-links' }, main);
+  el('a', { href: 'compare.html', text: t('answer.compare') }, links);
+  el('a', { href: 'trip.html', text: t('answer.plan') }, links);
+
+  /* The week, so the headline is not the only thing on offer. */
+  const strip = el('div', { class: 'answer-week', role: 'group', 'aria-label': t('answer.weekAria') }, wrap);
+  for (const d of days) {
+    const b = el('button', {
+      type: 'button',
+      class: `answer-day${d === best ? ' on' : ''}`,
+      'aria-label': t('answer.dayAria', { day: fmtDay(d.time), score: dec(d.best.score, 0), label: t(d.best.labelKey) }),
+    }, strip);
+    el('span', { class: 'ad-day', text: fmtWeekday(d.time) }, b);
+    const score = el('span', { class: 'ad-score', text: dec(d.best.score, 0) }, b);
+    score.style.color = scoreColor(d.best.score);
+    el('span', { class: 'ad-when', text: fmtClock(d.best.startTime) }, b);
+    const bar = el('span', { class: 'ad-bar' }, b);
+    const fill = el('i', {}, bar);
+    fill.style.width = `${Math.max(3, d.best.score)}%`;
+    fill.style.background = scoreColor(d.best.score);
+    /* Jumping to the hour the recommendation is about is the whole point of
+       showing the week here rather than on another page. */
+    b.addEventListener('click', () => {
+      const idx = m.hours.indexOf(d.best.hour);
+      if (idx >= 0) { state.selected = idx; renderAll(); }
+    });
+  }
+}
+
 function renderAll() {
   const m = state.model;
   if (!m) return;
+  renderAnswer();
   renderHero($('#hero'), m, state);
   renderIntel($('#intel'), m, state);
   renderModels($('#models'), m, state);
   renderML($('#ml'), m);
   renderAspect($('#aspect'), m, state);
   renderClimateCard();
+  syncFolds();
   renderBandPicker($('#band-picker'), m, state, pickBand);
   $('#band-label').textContent = state.bandZ === m.mtn.summit ? t('hourly.summit') : t('hourly.band', { z: state.bandZ });
   renderLegend($('#matrix-legend'), state.metric, state.unit);

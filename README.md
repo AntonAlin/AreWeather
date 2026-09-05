@@ -83,6 +83,13 @@ day the summit is *warmer* than the village. This app forecasts every 100 m band
   at 1420 m are not on the same schedule. It shows the spread across all seven models rather than a
   single confident line, states that the only available scenario is SSP5-8.5, and refuses to
   extrapolate past the end of the data.
+- **It leads with the answer.** The top of the page is one sentence — *your window is Sunday,
+  11:00–15:00, excellent* — with the best window on each of the next seven days beside it, computed
+  from the forecast already loaded so it costs no extra request. A first visit opens on whatever the
+  peak is actually best for today rather than a fixed default, and if the sport you picked is out of
+  season it names the one that is not, instead of telling you the week is worthless. The ten panels
+  of working are still there; six of them are folded shut with their own headline showing, so the
+  page opens at three and a half screens instead of six.
 - **Works with no signal.** The last forecast for each peak is cached in `localStorage` and a
   service worker caches the app shell, so the page opens at the trailhead and tells you how old
   the data is.

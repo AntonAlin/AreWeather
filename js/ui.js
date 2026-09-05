@@ -260,6 +260,14 @@ export function renderModels(node, model, state) {
   }).sort((a, b) => b.weight - a.weight);
 
   const maxW = Math.max(...rows.map((r) => r.weight), 0.01);
+  /* Closed, this panel's answer is simply which model is being trusted most. */
+  const lead = rows[0];
+  if (lead) {
+    el('span', {
+      class: 'visually-hidden', 'data-peek': '',
+      text: t('models.peek', { name: lead.meta?.name ?? lead.key, pct: dec(lead.weight * 100, 0) }),
+    }, node);
+  }
   for (const r of rows) {
     const row = el('div', { class: 'model-row' }, node);
     const name = el('div', { class: 'model-name' }, row);
@@ -292,18 +300,18 @@ export function renderML(node, model) {
   const head = el('div', { class: 'ml-head' }, node);
 
   if (!ml) {
-    el('span', { class: 'ml-badge', text: t('ml.training') }, head);
+    el('span', { class: 'ml-badge', 'data-peek': '', text: t('ml.training') }, head);
     el('p', { class: 'ml-note', text: t('ml.trainingNote') }, node);
     return;
   }
   if (ml.insufficient) {
-    el('span', { class: 'ml-badge no', text: t('ml.insufficient') }, head);
+    el('span', { class: 'ml-badge no', 'data-peek': '', text: t('ml.insufficient') }, head);
     el('p', { class: 'ml-note', html: t('ml.insufficientNote', { n: ml.n }) }, node);
     return;
   }
 
   const improved = ml.temp?.use;
-  el('span', { class: `ml-badge ${improved ? 'ok' : 'no'}`, text: improved ? t('ml.active') : t('ml.disabled') }, head);
+  el('span', { class: `ml-badge ${improved ? 'ok' : 'no'}`, 'data-peek': '', text: improved ? t('ml.active') : t('ml.disabled') }, head);
   el('span', {
     class: 'ml-note',
     text: t('ml.meta', {
@@ -368,7 +376,7 @@ export function renderObservations(node, model, obs, state) {
     big.innerHTML = `<span class="num">${d > 0 ? '+' : '−'}${dec(Math.abs(d), 1)}°</span>`;
     big.style.color = Math.abs(d) < 1 ? 'var(--lime)' : Math.abs(d) < 2.5 ? 'var(--amber)' : 'var(--rose)';
     const state2 = Math.abs(d) < 0.5 ? t('obs.state.spot') : d > 0 ? t('obs.state.warm') : t('obs.state.cold');
-    const txt = el('div', { class: 'obs-headline' }, head);
+    const txt = el('div', { class: 'obs-headline', 'data-peek': '' }, head);
     txt.innerHTML = t('obs.headline', {
       state: state2, station: ref.station.name,
       km: dec(ref.station.km, 1), height: dec(ref.station.height, 0),
@@ -380,7 +388,7 @@ export function renderObservations(node, model, obs, state) {
       })
       + '</span>';
   } else {
-    el('div', { class: 'obs-headline', text: t('obs.noMatch') }, head);
+    el('div', { class: 'obs-headline', 'data-peek': '', text: t('obs.noMatch') }, head);
   }
 
   /* Every nearby station, as raw readings. */
@@ -442,7 +450,7 @@ export function renderClimate(node, model, climate, state) {
     big.innerHTML = `<span class="num">${sign}${dec(Math.abs(temp.anomaly), 1)}°</span>`;
     const band = unusualnessTone(temp.percentile);
     big.style.color = band.colour;
-    const txt = el('div', { class: 'obs-headline' }, head);
+    const txt = el('div', { class: 'obs-headline', 'data-peek': '' }, head);
     txt.innerHTML = t('climate.headline', {
       pct: temp.pct >= 50 ? temp.pct : 100 - temp.pct,
       word: t(temp.pct >= 50 ? 'climate.warmer' : 'climate.colder'),
@@ -456,7 +464,7 @@ export function renderClimate(node, model, climate, state) {
       wind: dec(context.norm.windP50, 0),
     }) + '</span>';
   } else {
-    el('div', { class: 'obs-headline', text: t('climate.noContext') }, head);
+    el('div', { class: 'obs-headline', 'data-peek': '', text: t('climate.noContext') }, head);
   }
 
   const chart = el('div', { id: 'climate-year' }, node);
@@ -527,7 +535,7 @@ export function renderAspect(node, model, state) {
       ? t('aspect.sunUp', { deg: dec(sun.elevation, 0), dir: compass(sun.azimuth) })
       : t('aspect.sunDown'));
 
-    const verdict = el('p', { class: 'ml-note', style: 'margin-top:12px' }, side);
+    const verdict = el('p', { class: 'ml-note', 'data-peek': '', style: 'margin-top:12px' }, side);
     verdict.innerHTML = advice.loaded.length
       ? t('aspect.verdictLoaded', { sheltered: names(advice.sheltered), loaded: names(advice.loaded) })
       : t('aspect.verdictCalm', { sheltered: names(advice.sheltered) });

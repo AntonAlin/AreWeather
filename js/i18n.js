@@ -1503,6 +1503,25 @@ export const STRINGS = {
   'm.warm.th.year': { en: 'A winter year starts in this month, so one winter is never split in two', sv: 'Ett vinterår börjar den här månaden, så att en vinter aldrig delas i två' },
   'm.warm.th.lapse': { en: 'Lapse rate used to move the grid cell to each elevation, °C per 100 m', sv: 'Temperaturgradient som flyttar rutan till varje höjd, °C per 100 m' },
 
+  'models.peek': { en: '{name} carries most of the weight, {pct}%', sv: '{name} bär störst vikt, {pct} %' },
+
+  /* ---------- the answer banner ---------- */
+  'answer.eyebrow': { en: '{activity} · {mtn}', sv: '{activity} · {mtn}' },
+  'answer.best': { en: 'Your window is {day}, {from}–{to} — {label}.', sv: 'Ditt fönster är {day} {from}–{to} — {label}.' },
+  'answer.nothing': {
+    en: 'Nothing this week is worth the drive for {activity}. Try another peak, another sport, or another week.',
+    sv: 'Ingenting den här veckan är värt resan för {activity}. Prova en annan topp, en annan sport eller en annan vecka.',
+  },
+  'answer.insteadTry': {
+    en: 'Not a week for {activity} here. {other} is the one that works — best on {day}.',
+    sv: 'Ingen vecka för {activity} här. {other} är det som fungerar — bäst {day}.',
+  },
+  'answer.limited': { en: 'Held back by {factors}.', sv: 'Begränsas av {factors}.' },
+  'answer.compare': { en: 'All ten peaks →', sv: 'Alla tio toppar →' },
+  'answer.plan': { en: 'Plan a trip →', sv: 'Planera resan →' },
+  'answer.weekAria': { en: 'Best window each day', sv: 'Bästa fönster varje dygn' },
+  'answer.dayAria': { en: '{day}: {score} out of 100, {label}', sv: '{day}: {score} av 100, {label}' },
+
   /* ---------- chart tooltips ---------- */
   'aspect.tip.wind': { en: 'Wind on this side', sv: 'Vind på den här sidan' },
   'aspect.tip.loading': { en: 'Wind loading', sv: 'Drivsnö' },
