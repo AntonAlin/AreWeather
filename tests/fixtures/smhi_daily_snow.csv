@@ -1,0 +1,15 @@
+Stationsnamn;Stationsnummer;Stationsnät;Mäthöjd (meter över marken)
+Sälen;105450;SMHIs stationsnät;0.0
+
+Parameternamn;Beskrivning;Enhet
+Snödjup;momentanvärde, 1 gång/dygn, kl 06;meter
+
+Tidsperiod (fr.o.m);Tidsperiod (t.o.m);Höjd (meter över havet);Latitud (decimalgrader);Longitud (decimalgrader)
+1961-01-01 00:00:00;2023-08-31 23:59:59;408.0;61.1583;13.2667
+
+Datum;Tid (UTC);Snödjup;Kvalitet;;Tidsutsnitt:
+1961-01-01;06:00:00;0.10;G;;Kvalitetskoderna markerar:
+1961-01-02;06:00:00;0.12;G;;Grön (G) = Kontrollerade och godkända värden.
+1961-01-03;06:00:00;0.15;Y;;Gul (Y) = Misstänkta eller aggregerade värden.
+1961-01-04;06:00:00;;G;;Orange (O) = Ännu ej kontrollerade
+1961-01-05;06:00:00;0.20;O;;
