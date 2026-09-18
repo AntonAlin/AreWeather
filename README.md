@@ -383,3 +383,46 @@ For bugs, [GitHub issues](https://github.com/AntonAlin/AreWeather/issues) is the
 
 Weather data from [Open-Meteo](https://open-meteo.com) (CC BY 4.0), aggregating MET Norway, DMI,
 DWD, ECMWF, UKMO, NOAA and ERA5-Land. No tracking, no analytics, no accounts.
+
+## Climate analysis pipeline (Python) — Sälen, Åre, Tärnaby
+
+Separate from the static site: a Python package, `skiclimate/`, that downloads as much
+historical weather as is freely available for the three resorts and runs the statistics
+that answer *how fast are the seasons shrinking, and how long will they be?*
+
+**Sources**
+
+| Source | What | Span |
+|---|---|---|
+| [SMHI open data](https://opendata.smhi.se/metobs/introduction) | Every station within 60 km of each resort: daily mean/min/max temperature, precipitation, snow depth (hourly temperature, humidity and wind optional) | 1860s–today, gaps |
+| [ERA5-Land via Open-Meteo](https://open-meteo.com/en/docs/historical-weather-api) | Gap-free daily reanalysis at the resort coordinate, lapse-rate adjusted to village or summit elevation | 1940–today |
+| [CMIP6 HighResMIP via Open-Meteo](https://open-meteo.com/en/docs/climate-api) | Seven models, daily, bias-corrected; the only scenario offered is SSP5-8.5 | 1950–2050 |
+| [NASA GISTEMP](https://data.giss.nasa.gov/gistemp/) | Global winter (DJF) temperature anomaly, to tie local winters to global warming | 1880–today |
+
+**Per winter (July–June) it computes** days with ≥30 cm snow (the 100-day rule), longest
+continuous skiable run, snow-cover days, thermal winter length, frost and ice days, midwinter
+thaw days, snowmaking days, cold sum, max depth, rain-on-snow days and snow fraction. Where no
+station measures snow depth, a degree-day snowpack model (same one as the site's warming page)
+fills in.
+
+**Then it runs** Theil-Sen + Mann-Kendall trends with confidence intervals, OLS with HAC errors,
+a permutation-tested changepoint, 1961–1990 vs 1991–2020 comparisons, season-days-per-°C
+sensitivity, local-vs-global warming amplification, and a projection: gradient boosting and ridge
+regression trained on observed winters (time-series cross-validated against climatology), applied to
+bias-corrected CMIP6 winters, reported as ensemble median, model spread and share of winters
+that still pass the 100-day rule per decade.
+
+```bash
+pip install -r requirements.txt
+python run_pipeline.py all                 # download + features + analyze, ~20 min first time
+python run_pipeline.py all --synthetic     # fake data, no network, to see what you get
+python run_pipeline.py features --elevation top && python run_pipeline.py analyze
+pytest tests                               # 19 tests, no network needed
+```
+
+Output lands in `data/output/`: `summary.md`, CSVs of every table, and PNG figures.
+`notebooks/skiclimate.ipynb` runs the same thing in Google Colab or Microsoft Fabric.
+
+Read the caveats before quoting numbers: SSP5-8.5 is the hottest scenario, seven models are
+not a sample, the snowmaking count uses minimum temperature as a wet-bulb proxy, and a
+25 km grid cell does not know which side of the mountain it is on.

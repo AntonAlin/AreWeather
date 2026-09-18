@@ -1,0 +1,13 @@
+Stationsnamn;Stationsnummer;Stationsnät;Mäthöjd (meter över marken)
+Åre;134110;SMHIs stationsnät;2.0
+
+Parameternamn;Beskrivning;Enhet
+Lufttemperatur;medelvärde 1 dygn, 1 gång/dygn, kl 00;celsius
+
+Tidsperiod (fr.o.m);Tidsperiod (t.o.m);Höjd (meter över havet);Latitud (decimalgrader);Longitud (decimalgrader)
+1961-01-01 00:00:00;2023-08-31 23:59:59;380.0;63.3983;13.0833
+
+Från Datum Tid (UTC);Till Datum Tid (UTC);Representativt dygn;Lufttemperatur;Kvalitet;;Tidsutsnitt:
+1961-01-01 00:00:01;1961-01-02 00:00:00;1961-01-01;-5.2;G;;Kvalitetskoderna markerar:
+1961-01-02 00:00:01;1961-01-03 00:00:00;1961-01-02;-7.8;G;;
+1961-01-03 00:00:01;1961-01-04 00:00:00;1961-01-03;-12,4;G;;

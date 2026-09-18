@@ -1,0 +1,10 @@
+Stationsnamn;Stationsnummer;Stationsnät;Mäthöjd (meter över marken)
+Storlien-Visjövalen;134000;SMHIs stationsnät;2.0
+
+Parameternamn;Beskrivning;Enhet
+Lufttemperatur;momentanvärde, 1 gång/tim;celsius
+
+Datum;Tid (UTC);Lufttemperatur;Kvalitet;;Tidsutsnitt:
+2024-01-01;00:00:00;-3.1;G;;Kvalitetskoderna markerar:
+2024-01-01;01:00:00;-3.4;G;;
+2024-01-01;02:00:00;-3.9;Y;;

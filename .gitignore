@@ -1,0 +1,6 @@
+# nedladdad och bearbetad data – hämtas med run_pipeline.py, hör inte hemma i git
+data/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
